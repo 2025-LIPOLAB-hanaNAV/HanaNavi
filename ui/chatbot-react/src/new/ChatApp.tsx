@@ -18,8 +18,34 @@ const ChatApp: React.FC = () => {
   const [showCitations, setShowCitations] = useState(true)
   const abortRef = useRef<AbortController | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
+  const [models, setModels] = useState<string[]>([])
+  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem('hn_model') || '')
+  const [pullTarget, setPullTarget] = useState('')
+  const [pulling, setPulling] = useState(false)
+  const [loadingModels, setLoadingModels] = useState(false)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        setLoadingModels(true)
+        const r = await fetch(`${RAG_BASE}/llm/models`)
+        if (r.ok) {
+          const data = await r.json()
+          const items = (data?.models || []) as string[]
+          setModels(items)
+          if (!selectedModel && items.length > 0) {
+            setSelectedModel(items[0])
+            localStorage.setItem('hn_model', items[0])
+          }
+        }
+      } finally {
+        setLoadingModels(false)
+      }
+    }
+    refresh().catch(()=>{})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const send = async () => {
     if (!input.trim() || streaming) return
@@ -38,7 +64,7 @@ const ChatApp: React.FC = () => {
       const res = await fetch(`${RAG_BASE}/rag/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: user.content, top_k: 8, enforce_policy: true, history }),
+        body: JSON.stringify({ query: user.content, top_k: 8, enforce_policy: true, history, model: selectedModel || undefined }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
@@ -105,9 +131,27 @@ const ChatApp: React.FC = () => {
   return (
     <div className="min-h-screen flex">
       <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b px-4 py-3 flex items-center justify-between">
-          <div className="font-semibold">HanaNavi Chatbot</div>
-          <div className="text-sm text-gray-500">RAG • Policy Guard</div>
+        <header className="bg-white border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="font-semibold">HanaNavi Chatbot</div>
+            <div className="text-sm text-gray-500">RAG • Policy Guard</div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label className="text-sm text-gray-600">모델</label>
+            <select className="min-w-[200px]" value={selectedModel} onChange={e=>{ setSelectedModel(e.target.value); localStorage.setItem('hn_model', e.target.value) }}>
+              <option value="">(직접 입력 또는 Pull)</option>
+              {models.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <button className="bg-gray-600" onClick={async ()=>{
+              try { setLoadingModels(true); const r = await fetch(`${RAG_BASE}/llm/models`); if(r.ok){ const d = await r.json(); setModels(d?.models||[]) } } finally { setLoadingModels(false) }
+            }} disabled={loadingModels}>{loadingModels? '갱신중...' : '목록 갱신'}</button>
+            <input className="w-64" placeholder="모델명 입력 (예: qwen2:7b)" value={pullTarget} onChange={e=>setPullTarget(e.target.value)} />
+            <button onClick={async ()=>{
+              if(!pullTarget.trim()) return
+              setPulling(true); setError(null)
+              try { const r = await fetch(`${RAG_BASE}/llm/pull`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: pullTarget.trim() }) }); if(!r.ok) throw new Error(`pull failed: ${r.status}`); setSelectedModel(pullTarget.trim()); localStorage.setItem('hn_model', pullTarget.trim()); } catch(e:any){ setError(e?.message||String(e)) } finally { setPulling(false) }
+            }} disabled={pulling}>{pulling? 'Pull 중...' : 'Pull'}</button>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">

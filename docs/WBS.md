@@ -51,6 +51,7 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 - [x] Normal Mode: 상위 6–8 청크 합성
 - [x] Citations Formatter 적용(문서명+chunk id 기반)
 - [x] PII/내부정보 거절/마스킹 규칙 (정책 엔포스먼트)
+ - [x] 모델 관리 API: `/llm/models`, `/llm/pull` (Ollama)
 
 ---
 
@@ -62,6 +63,7 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
   - [x] 첨부 미리보기(PDF page, XLSX range)
   - [x] 필터: 기간/카테고리/파일타입
   - [x] Feedback 버튼 (👍/👎)
+  - [x] 모델 선택/목록/풀 UI (Ollama)
 
 ---
 

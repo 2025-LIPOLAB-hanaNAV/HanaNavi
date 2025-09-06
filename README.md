@@ -217,11 +217,16 @@ curl -X POST http://localhost:8002/webhook \
 - Docker: `docker compose -f docker/docker-compose.yml up -d chatbot`
 - 브라우저에서 http://localhost:5174 접속 → 질문 입력 → 답변/출처 확인 → '미리보기'로 첨부 확인(PDF 임베드)
 
-모델 설정
+모델 설정 / 관리
 
 - 서비스: `ollama` 컨테이너에서 로컬 LLM 서빙(OpenAI 호환은 선택)
-- 모델 선택: `.env`에 `LLM_MODEL` 지정(기본 `gemma3:12b`)
+- 기본 모델: `.env`에 `LLM_MODEL` 지정(기본 `gemma3:12b`)
+- UI에서 모델 선택: 챗봇 상단의 모델 셀렉터에서 현재 설치된 모델 목록을 조회/선택할 수 있습니다.
+- 모델 Pull: 챗봇 상단 입력에 모델명(예:`qwen2:7b`) 입력 후 Pull 버튼으로 서버에 다운로드를 요청합니다.
+  - 서버 API: `GET /llm/models`(설치 목록), `POST /llm/pull` body `{"model":"qwen2:7b"}` (Ollama 전용)
 - 동시성: `.env`에 `LLM_MAX_SESSIONS`로 제한(12B: 2–4 권장, 27B: 1–2 권장)
 - 타임아웃: `.env`에 `LLM_TIMEOUT`(초) 설정
 - 스트리밍: `POST /rag/stream` SSE 엔드포인트 제공
-- OpenAI-Compat 사용 시: `.env`에 `LLM_API=openai`와 `OLLAMA_BASE_URL`을 해당 호환 서버 주소로 설정
+- OpenAI-Compat(Dify 등) 사용 시:
+  - `.env`: `LLM_API=openai`, `LLM_BASE_URL=http://<dify-host>:<port>`, `OPENAI_API_KEY=app-xxx`
+  - 모델 목록/풀은 제공되지 않으며, UI에서 임의 모델명을 입력해 사용 가능합니다.

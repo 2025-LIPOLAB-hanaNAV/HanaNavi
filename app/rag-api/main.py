@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 import asyncio
 import threading
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -100,6 +100,7 @@ class RagRequest(BaseModel):
     enforce_policy: bool = True
     filters: Dict[str, Any] | None = None
     history: List[Dict[str, str]] | None = None  # [{role: user|assistant, content: str}]
+    model: str | None = None
 
 
 class RagResponse(BaseModel):
@@ -145,7 +146,7 @@ def rag_query(req: RagRequest) -> RagResponse:
     ]
 
     # Compose prompt (LLM stubbed for now)
-    client = LLMClient()
+    client = LLMClient(model=req.model or None)
     convo = []
     hist = _history_text(req.history)
     if hist:
@@ -198,7 +199,7 @@ async def rag_stream(req: RagRequest):
         for h in hits[: req.top_k]
     ]
 
-    client = LLMClient()
+    client = LLMClient(model=req.model or None)
     convo = []
     hist = _history_text(req.history)
     if hist:
@@ -229,6 +230,58 @@ async def rag_stream(req: RagRequest):
                 yield "event: end\n\n"
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
+
+
+# LLM utility endpoints (Ollama only)
+class LLMModelsResponse(BaseModel):
+    models: List[str]
+
+
+@app.get("/llm/models", response_model=LLMModelsResponse)
+def list_llm_models() -> LLMModelsResponse:
+    api = os.getenv("LLM_API", "ollama").lower()
+    if api != "ollama":
+        return LLMModelsResponse(models=[])
+    base = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
+    try:
+        import httpx
+
+        r = httpx.get(base + "/api/tags", timeout=15.0)
+        r.raise_for_status()
+        data = r.json() or {}
+        tags = data.get("models", []) or []
+        names = []
+        for m in tags:
+            name = m.get("name") or m.get("model")
+            if name:
+                names.append(name)
+        return LLMModelsResponse(models=names)
+    except Exception:
+        return LLMModelsResponse(models=[])
+
+
+class LLMPullRequest(BaseModel):
+    model: str
+
+
+@app.post("/llm/pull")
+def pull_llm_model(req: LLMPullRequest) -> Dict[str, Any]:
+    api = os.getenv("LLM_API", "ollama").lower()
+    if api != "ollama":
+        raise HTTPException(status_code=400, detail="Only supported for LLM_API=ollama")
+    base = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
+    try:
+        import httpx
+
+        # Fire-and-forget style pull
+        with httpx.stream("POST", base + "/api/pull", json={"name": req.model}, timeout=None) as r:
+            if r.status_code >= 400:
+                raise HTTPException(status_code=r.status_code, detail="pull failed")
+        return {"status": "started", "model": req.model}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class FeedbackRequest(BaseModel):

@@ -14,6 +14,7 @@
 - RAG: `/search/hybrid`, `/rag/query`, 스트리밍 `/rag/stream` + 정책(PII/내부정보) 거절/마스킹 + 피드백 로깅(`/feedback`)
 - 임베딩: Sentence-Transformers 옵션(snowflake v2 ko), query/passages 템플릿 분리, Redis 캐시 재사용
 - 모델: Gemma3 12B(Ollama) 기반, 양자화 태그 지원, 동시성 세마포어, 타임아웃, SSE 스트리밍
+  - 모델 관리: rag-api `/llm/models`(목록), `/llm/pull`(다운로드) 제공, 챗봇 UI에서 선택/풀 지원
 - UI: 게시판(Board) 글 작성/첨부 업로드, 챗봇(Chatbot) 질문/답변/출처 탭 + PDF page/XLSX range 미리보기 + 필터 + 👍/👎
 - 평가: 데이터셋(master/refusal/pii), 저지 모델(Qwen2 32B) 통합, 리포트(metrics_*.json)
 
@@ -50,6 +51,7 @@
 - Normal: LLM 합성
 - Output: 답변 + 출처(문서명 + 범위)
 - Citations Formatter: 포맷 강제
+ - OpenAI-Compat 사용 시 환경: `LLM_API=openai`, `LLM_BASE_URL=http://<dify-host>:<port>`, `OPENAI_API_KEY=app-xxx`
 
 ---
 
