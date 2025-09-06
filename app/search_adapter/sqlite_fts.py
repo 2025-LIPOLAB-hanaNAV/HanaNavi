@@ -22,10 +22,11 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
         # Use bm25(fts) scoring; snippet limited
         cur.execute(
             """
-            SELECT rowid AS id, title, body, tags, category, filetype, posted_at,
-                   bm25(posts) AS score
-            FROM posts
-            WHERE posts MATCH ?
+            SELECT p.rowid AS id, m.post_id AS post_id, p.title, p.body, p.tags, p.category, p.filetype, p.posted_at,
+                   bm25(p) AS score
+            FROM posts p
+            LEFT JOIN fts_row_map m ON m.rowid = p.rowid
+            WHERE p MATCH ?
             ORDER BY score
             LIMIT ?
             """,
@@ -43,6 +44,7 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
                 "category": row["category"],
                 "filetype": row["filetype"],
                 "date": row["posted_at"],
+                "post_id": row["post_id"],
             }
             # bm25 lower score = more relevant; invert for consistency
             score = 1.0 / (1.0 + float(row["score"]))

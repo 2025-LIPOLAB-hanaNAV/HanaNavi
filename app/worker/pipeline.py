@@ -117,6 +117,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     # 6) Index IR (title/body/tags...)
     index_post(
         sqlite_path,
+        post_id=post_id,
         title=title,
         body="\n".join(parsed_texts),
         tags=tags,

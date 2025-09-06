@@ -76,6 +76,10 @@ def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]]
         title = payload.get("title") or payload.get("post_id") or doc_id
         text = payload.get("text") or payload.get("snippet") or ""
         source = payload.get("source") or f"{title}#chunk:{payload.get('chunk_id','?')}"
+        # Derive post_id from doc_id if not present (e.g., FTS row: post:<rowid>)
+        pid = payload.get("post_id")
+        if not pid and doc_id.startswith("post:"):
+            pid = doc_id.split(":", 1)[1]
         results.append(
             {
                 "id": doc_id,
@@ -83,7 +87,7 @@ def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]]
                 "snippet": text[:300],
                 "source": source,
                 "title": title,
-                "post_id": payload.get("post_id"),
+                "post_id": pid,
                 "filetype": payload.get("filetype"),
                 "posted_at": payload.get("date") or payload.get("posted_at"),
                 "category": payload.get("category"),

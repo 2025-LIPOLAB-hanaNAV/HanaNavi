@@ -23,6 +23,15 @@ def ensure_fts5(db_path: str) -> None:
             );
             """
         )
+        # Map FTS rowid -> external post_id
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fts_row_map(
+                rowid INTEGER PRIMARY KEY,
+                post_id TEXT
+            );
+            """
+        )
         # Meta tables
         cur.execute(
             """
@@ -52,6 +61,7 @@ def ensure_fts5(db_path: str) -> None:
 def index_post(
     db_path: str,
     *,
+    post_id: str,
     title: str,
     body: str,
     tags: str = "",
@@ -69,6 +79,12 @@ def index_post(
             "INSERT INTO posts(title, body, tags, category, filetype, posted_at, severity) VALUES(?,?,?,?,?,?,?)",
             (title, body, tags, category, filetype, posted_at or "", severity or ""),
         )
+        rid = cur.lastrowid
+        if rid is not None:
+            cur.execute(
+                "REPLACE INTO fts_row_map(rowid, post_id) VALUES(?,?)",
+                (rid, post_id),
+            )
         conn.commit()
     finally:
         conn.close()

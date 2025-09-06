@@ -115,6 +115,29 @@ def _detect_table_mode(q: str) -> bool:
     return any(k in ql for k in keywords)
 
 
+def _is_smalltalk(q: str) -> bool:
+    ql = q.strip().lower()
+    if not ql:
+        return True
+    greetings = [
+        "안녕", "안녕하세요", "하이", "hi", "hello", "헬로", "반가워",
+        "좋은 아침", "좋은 저녁", "안부", "고마워", "감사", "thank you", "thanks",
+    ]
+    if any(g in ql for g in greetings):
+        # very short greetings / courtesy
+        if len(ql) <= 20:
+            return True
+    # Domain keywords that imply retrieval
+    domain = [
+        "보이스피싱", "사기", "규정", "정책", "절차", "계좌", "지급정지", "내부",
+        "문서", "첨부", "pdf", "xlsx", "docx", "공지", "가이드", "링크",
+    ]
+    if any(k in ql for k in domain):
+        return False
+    # Very short generic utterances are smalltalk
+    return len(ql) < 12
+
+
 def _history_text(history: List[Dict[str, str]] | None, max_turns: int = 4) -> str:
     if not history:
         return ""
@@ -132,10 +155,10 @@ def rag_query(req: RagRequest) -> RagResponse:
     mode = req.mode
     if mode == "auto":
         mode = "table" if _detect_table_mode(req.query) else "normal"
-
-    hits = do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
+    smalltalk = _is_smalltalk(req.query)
+    hits = [] if smalltalk else do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
     ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
-    cits = [
+    cits = [] if smalltalk else [
         {
             "id": h["id"],
             "title": h.get("title"),
@@ -152,12 +175,15 @@ def rag_query(req: RagRequest) -> RagResponse:
     if hist:
         convo.append({"role": "user", "content": f"이전 대화:\n{hist}"})
         convo.append({"role": "assistant", "content": "확인했습니다."})
-    final_user = (
-        "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
-        "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
-        f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
-        "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
-    )
+    if smalltalk:
+        final_user = f"다음 메시지에 자연스럽게 간단히 답변하세요. 출처/인용은 붙이지 마세요.\n\n질의: {req.query}"
+    else:
+        final_user = (
+            "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
+            "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
+            f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
+            "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
+        )
     convo.append({"role": "user", "content": final_user})
     with _llm_sem_thread:
         answer = client.chat(convo)
@@ -187,9 +213,10 @@ async def rag_stream(req: RagRequest):
     if mode == "auto":
         mode = "table" if _detect_table_mode(req.query) else "normal"
 
-    hits = do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
+    smalltalk = _is_smalltalk(req.query)
+    hits = [] if smalltalk else do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
     ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
-    cits = [
+    cits = [] if smalltalk else [
         {
             "id": h["id"],
             "title": h.get("title"),
@@ -205,12 +232,15 @@ async def rag_stream(req: RagRequest):
     if hist:
         convo.append({"role": "user", "content": f"이전 대화:\n{hist}"})
         convo.append({"role": "assistant", "content": "확인했습니다."})
-    final_user = (
-        "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
-        "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
-        f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
-        "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
-    )
+    if smalltalk:
+        final_user = f"다음 메시지에 자연스럽게 간단히 답변하세요. 출처/인용은 붙이지 마세요.\n\n질의: {req.query}"
+    else:
+        final_user = (
+            "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
+            "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
+            f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
+            "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
+        )
     convo.append({"role": "user", "content": final_user})
 
     async def _gen():
@@ -225,8 +255,9 @@ async def rag_stream(req: RagRequest):
                 yield "event: error\n\n"
             finally:
                 import json as _json
-                yield "event: citations\n"
-                yield f"data: {_json.dumps(cits, ensure_ascii=False)}\n\n"
+                if cits:
+                    yield "event: citations\n"
+                    yield f"data: {_json.dumps(cits, ensure_ascii=False)}\n\n"
                 yield "event: end\n\n"
 
     return StreamingResponse(_gen(), media_type="text/event-stream")

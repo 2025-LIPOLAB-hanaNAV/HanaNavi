@@ -185,7 +185,7 @@ services:
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_LLM_LIBRARY=cublas
     volumes:
-      - ${OLLAMA_MODELS_HOST_DIR:-.ollama}:/root/.ollama
+      - "${OLLAMA_MODELS_HOST_DIR:-.ollama}:/root/.ollama"
     gpus: all
     # For GPU (A100), request NVIDIA devices
     deploy:
