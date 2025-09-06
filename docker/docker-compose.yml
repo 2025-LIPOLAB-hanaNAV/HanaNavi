@@ -56,8 +56,11 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_BASE_URL=http://ollama:11434
+      - SQLITE_PATH=/data/sqlite/ir.db
     ports:
       - "8001:8000"
+    volumes:
+      - appdata:/data
 
   etl-api:
     build:
@@ -85,11 +88,16 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/data/storage
+      - SQLITE_PATH=/data/sqlite/ir.db
     command: ["celery", "-A", "app.worker.celery_app:app", "worker", "--loglevel=info"]
     # Celery worker listening on Redis broker
+    volumes:
+      - appdata:/data
 
 volumes:
   qdrant:
   redis:
   pgdata:
   ollama:
+  appdata:

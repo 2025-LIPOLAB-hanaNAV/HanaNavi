@@ -4,4 +4,4 @@ qdrant-client
 pypdf
 openpyxl
 python-docx
-
+requests

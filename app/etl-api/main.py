@@ -33,3 +33,9 @@ async def webhook(event: WebhookEvent) -> Dict[str, Any]:
         async_result = ingest_from_webhook.delay(payload)  # type: ignore
         task_id = async_result.id
     return {"status": "accepted", "task_id": task_id, "event": payload}
+
+
+@app.post("/ingest/webhook")
+async def ingest_webhook(event: WebhookEvent) -> Dict[str, Any]:
+    """Alias endpoint per WBS spec."""
+    return await webhook(event)
