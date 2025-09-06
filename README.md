@@ -167,10 +167,16 @@ curl -X POST http://localhost:8002/webhook \
   # macOS: open http://localhost:8003/reports
   # Windows: start http://localhost:8003/reports
   ```
-- 10) 종료/로그:
+- 10) 종료/로그/빠른 재시도:
   - 종료: `make down`
   - 전체 로그: `make logs`
   - 특정 서비스 로그: `docker compose -f docker/docker-compose.yml logs -f rag-api`
+  - 빠른 재빌드 팁:
+    - 전체 빌드 캐시 사용: `make build` (기본 캐시 활용)
+    - UI만 빌드: `make build-ui` → `docker compose -f docker/docker-compose.yml up -d board chatbot`
+    - API만 빌드: `make build-apis` → `docker compose -f docker/docker-compose.yml up -d rag-api etl-api eval-api`
+    - 실패 후 재시도 시: `make up` (재빌드 없이 기동), 필요 서비스만 `make up-rag` 등으로 부분 재기동
+    - 완전 재빌드가 필요할 때만: `make rebuild`
 
 환경 변수는 `.env.example` 참고 후 `.env`에 설정하세요. 로컬 Python/Node 설치 없이 Docker만으로 실행 가능합니다.
 
