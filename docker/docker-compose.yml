@@ -60,6 +60,11 @@ services:
       - USE_RERANK=1
       - RERANK_BACKEND=st # set to 'onnx' with RERANKER_ONNX_PATH to enable ONNX
       - FEEDBACK_DIR=/data/feedback
+      - REDIS_URL=redis://redis:6379/0
+      - EMBED_CACHE=redis
+      - EMBED_USE_TEMPLATE=1
+      - EMBED_QUERY_PREFIX=query: 
+      - EMBED_PASSAGE_PREFIX=passage: 
     ports:
       - "8001:8000"
     volumes:

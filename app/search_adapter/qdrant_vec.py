@@ -1,7 +1,7 @@
 import os
 from typing import List, Tuple, Dict, Any
 
-from app.models.embeddings import embed_texts
+from app.models.embeddings import embed_query
 
 try:
     from qdrant_client import QdrantClient
@@ -23,7 +23,7 @@ def vector_search(
     collection: str = "post_chunks",
     top_k: int = 50,
 ) -> List[Tuple[str, float, Dict[str, Any]]]:
-    vec = embed_texts([query])[0]
+    vec = embed_query([query])[0]
     cli = _client()
     res = cli.search(collection_name=collection, query_vector=vec, limit=top_k)
     out: List[Tuple[str, float, Dict[str, Any]]] = []

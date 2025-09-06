@@ -108,6 +108,8 @@ curl -X POST http://localhost:8002/webhook \
 
 - Sentence-Transformers 기반 임베딩 사용 시 `.env`에 `USE_ST=1` 설정
 - 모델: `EMBEDDING_MODEL=dragonkue/snowflake-arctic-embed-l-v2.0-ko` (기본)
+ - 템플릿 분리: `EMBED_USE_TEMPLATE=1`, `EMBED_QUERY_PREFIX`, `EMBED_PASSAGE_PREFIX` (기본 `query: ` / `passage: `)
+ - 캐시: `EMBED_CACHE=redis` + `REDIS_URL=redis://redis:6379/0`로 임베딩 재사용
 
 재랭크(bge-reranker-small):
 

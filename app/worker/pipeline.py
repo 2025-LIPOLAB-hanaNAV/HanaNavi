@@ -4,7 +4,7 @@ import hashlib
 from typing import Dict, Any, List
 
 from app.utils.config import get_settings
-from app.models.embeddings import embed_texts
+from app.models.embeddings import embed_passages
 from app.parser.pdf_parser import parse_pdf
 from app.parser.xlsx_parser import parse_xlsx
 from app.parser.docx_parser import parse_docx
@@ -83,7 +83,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     chunks = chunk_texts(parsed_texts, chunk_size=400, overlap=50)
 
     # 4) Embed
-    vectors = embed_texts(chunks, dim=1024)
+    vectors = embed_passages(chunks, dim=1024)
 
     # 5) Upsert to Qdrant
     points = []

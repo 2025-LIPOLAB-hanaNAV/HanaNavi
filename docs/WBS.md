@@ -76,9 +76,9 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ## 7. Embedding
 - [x] Sentence-Transformers 서비스: snowflake v2 ko (옵션)
 - [x] 출력 차원 1024 고정
-- [ ] query/passages 템플릿 분리
+- [x] query/passages 템플릿 분리 (환경변수 프리픽스)
 - [x] mean pooling + L2 normalize
-- [ ] 캐시: 임베딩 해시 재사용
+- [x] 캐시: 임베딩 해시 재사용(옵션 Redis)
 - [x] Qdrant 컬렉션 스키마 반영
 
 ---
