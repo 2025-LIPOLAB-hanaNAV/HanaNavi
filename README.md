@@ -69,7 +69,7 @@ reports/
 cp .env.example .env
 ```
 
-2) 전체 스택 기동(Qdrant/Redis/Postgres/Ollama + APIs/worker):
+2) 전체 스택 기동(Qdrant/Redis/Postgres/Ollama + APIs/worker + UI):
 
 ```bash
 make up
@@ -123,6 +123,54 @@ curl -X POST http://localhost:8002/webhook \
 - 거절 규칙: 질의가 전화/이메일/주민등록/계좌 등 PII를 요구하면 거절 응답
 - 마스킹 규칙: 답변 내 이메일/전화/주민등록/카드/API 키 등 패턴 자동 마스킹
 - 응답 필드: `policy.refusal`, `policy.masked`, `policy.pii_types`, `policy.reason`
+
+---
+
+## 🐳 Docker Quickstart (요약)
+
+- 사전 준비: Docker(Compose v2), 포트 사용 가능: 11434, 6333, 6379, 5432, 8001/2/3, 5173/5174, 9000/9001
+- 1) 기동: `make up`
+- 2) 모델 풀: `make pull-model` 또는 `make pull-model MODEL=gemma3:12b-q5_K_M`
+- 3) UI 접속: Board `http://localhost:5173`, Chatbot `http://localhost:5174`
+- 4) 업로드 예시:
+  ```bash
+  curl -F file=@README.md http://localhost:8002/upload
+  ```
+- 5) 웹훅(색인) 예시:
+  ```bash
+  curl -X POST http://localhost:8002/ingest/webhook \
+    -H 'Content-Type: application/json' \
+    -d '{"action":"post_created","post_id":1001,"title":"보이스피싱 주의","body":"사칭 주의 공지","attachments":[{"filename":"README.md","url":"http://etl-api:8000/files/README.md"}],"date":"2025-09-06","category":"Notice"}'
+  ```
+- 6) 하이브리드 검색:
+  ```bash
+  curl -s http://localhost:8001/search/hybrid -H 'Content-Type: application/json' \
+    -d '{"query":"보이스피싱 대응 절차"}' | jq .
+  ```
+- 7) RAG 질의:
+  ```bash
+  curl -s http://localhost:8001/rag/query -H 'Content-Type: application/json' \
+    -d '{"query":"보이스피싱 의심 전화 대응"}' | jq .
+  ```
+- 8) 스트리밍(SSE):
+  ```bash
+  curl -N http://localhost:8001/rag/stream \
+    -H 'Content-Type: application/json' \
+    -d '{"query":"계좌 지급정지 절차"}'
+  ```
+- 9) 평가 실행:
+  ```bash
+  curl -s http://localhost:8003/eval/run -H 'Content-Type: application/json' -d '{"dataset":"master"}' | jq .
+  # 브라우저로 리포트 확인
+  # macOS: open http://localhost:8003/reports
+  # Windows: start http://localhost:8003/reports
+  ```
+- 10) 종료/로그:
+  - 종료: `make down`
+  - 전체 로그: `make logs`
+  - 특정 서비스 로그: `docker compose -f docker/docker-compose.yml logs -f rag-api`
+
+환경 변수는 `.env.example` 참고 후 `.env`에 설정하세요. 로컬 Python/Node 설치 없이 Docker만으로 실행 가능합니다.
 
 ---
 
