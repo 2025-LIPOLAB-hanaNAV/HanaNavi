@@ -4,3 +4,4 @@ celery>=5
 redis
 openpyxl
 prometheus-client
+python-multipart

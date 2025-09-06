@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import Response, HTMLResponse
 from pydantic import BaseModel
 
-from .judge import judge_once
+from judge import judge_once
 
 
 class EvalRunRequest(BaseModel):

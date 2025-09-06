@@ -10,7 +10,13 @@ class LLMClient:
         base_url: Optional[str] = None,
         model: Optional[str] = None,
     ):
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        # Resolve base URL with support for OpenAI/Dify style endpoints
+        self.base_url = (
+            base_url
+            or os.getenv("LLM_BASE_URL")
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        )
         self.model = model or os.getenv("LLM_MODEL", os.getenv("OLLAMA_MODEL", "gemma3:12b"))
         self.api = os.getenv("LLM_API", "ollama")  # ollama | openai
         self.timeout = float(os.getenv("LLM_TIMEOUT", "60"))
@@ -31,7 +37,11 @@ class LLMClient:
                 "stream": False,
             }
             try:
-                r = httpx.post(url, json=payload, timeout=self.timeout)
+                headers = {}
+                api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+                r = httpx.post(url, json=payload, headers=headers, timeout=self.timeout)
                 r.raise_for_status()
                 data = r.json()
                 return data["choices"][0]["message"]["content"]
@@ -78,7 +88,11 @@ class LLMClient:
                 "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "512")),
                 "stream": True,
             }
-            with httpx.stream("POST", url, json=payload, timeout=self.timeout) as r:
+            headers = {}
+            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            with httpx.stream("POST", url, json=payload, headers=headers, timeout=self.timeout) as r:
                 r.raise_for_status()
                 for line in r.iter_lines():
                     if not line:

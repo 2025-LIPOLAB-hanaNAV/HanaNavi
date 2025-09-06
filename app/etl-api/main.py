@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from .attachments import get_attachments
+from attachments import get_attachments
 try:
     import openpyxl
 except Exception:  # pragma: no cover

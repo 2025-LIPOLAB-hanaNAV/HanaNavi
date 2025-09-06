@@ -141,16 +141,9 @@ services:
     restart: unless-stopped
     mem_limit: 1g
 
-volumes:
-  qdrant:
-  redis:
-  pgdata:
-  appdata:
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
-    ports:
-      - "11434:11434"
     environment:
       - OLLAMA_ORIGINS=*
     volumes:
@@ -163,4 +156,10 @@ volumes:
     #       devices:
     #         - capabilities: [gpu]
     # Then inside container: ollama pull gemma3:12b
+
+volumes:
+  qdrant:
+  redis:
+  pgdata:
+  appdata:
   minio:
