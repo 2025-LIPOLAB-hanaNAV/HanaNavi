@@ -1,9 +1,15 @@
 COMPOSE = docker compose -f docker/docker-compose.yml
 
-.PHONY: up down ps logs build pull-model
+.PHONY: up up-ollama up-no-ollama down ps logs build pull-model
 
 up:
 	$(COMPOSE) up -d --build
+
+up-ollama:
+	COMPOSE_PROFILES=ollama $(COMPOSE) up -d --build
+
+up-no-ollama:
+	COMPOSE_PROFILES= $(COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down -v

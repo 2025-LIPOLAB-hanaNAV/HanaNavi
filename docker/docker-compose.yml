@@ -33,6 +33,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
+    profiles: ["ollama"]
     ports:
       - "11434:11434"
     environment:
@@ -57,7 +58,7 @@ services:
       - ollama
     environment:
       QDRANT_URL: http://qdrant:6333
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       SQLITE_PATH: /data/sqlite/ir.db
       USE_RERANK: "1"
       # set to 'onnx' with RERANKER_ONNX_PATH to enable ONNX
@@ -73,6 +74,8 @@ services:
     volumes:
       - appdata:/data
     mem_limit: 1g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   etl-api:
     build:
@@ -101,12 +104,14 @@ services:
       - RAG_API_BASE=http://rag-api:8000
       - JUDGE_MODEL=qwen2:32b
       - JUDGE_API=ollama
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
     ports:
       - "8003:8000"
     volumes:
       - appdata:/data
     mem_limit: 512m
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   worker:
     build:
