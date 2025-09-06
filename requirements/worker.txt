@@ -7,3 +7,4 @@ python-docx
 requests
 sentence-transformers
 numpy
+opensearch-py

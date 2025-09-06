@@ -12,6 +12,14 @@ from app.worker.downloader import maybe_download
 from app.worker.chunker import chunk_texts
 from app.indexer.index_qdrant import upsert_embeddings
 from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attachments
+import os as _os
+_IR_BACKEND = _os.getenv("IR_BACKEND", "sqlite").lower()
+_USE_OPENSEARCH = _IR_BACKEND == "opensearch" or _os.getenv("IR_DUAL", "0") == "1"
+if _USE_OPENSEARCH:
+    try:
+        from app.indexer.index_opensearch import upsert_post as os_upsert_post  # type: ignore
+    except Exception:  # pragma: no cover
+        os_upsert_post = None  # type: ignore
 
 
 def _sha1(data: bytes) -> str:
@@ -117,6 +125,22 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         posted_at=date,
         severity=str(event.get("severity", "")),
     )
+    # Optional: also index into OpenSearch for scalable IR
+    if _USE_OPENSEARCH and os_upsert_post is not None:
+        try:
+            os_upsert_post(
+                post_id=post_id,
+                title=title,
+                body="\n".join(parsed_texts),
+                tags=tags,
+                category=category,
+                filetype=filetype,
+                posted_at=date,
+                severity=str(event.get("severity", "")),
+                index=_os.getenv("OPENSEARCH_INDEX", "posts"),
+            )
+        except Exception:
+            pass
 
     # 7) Save meta + attachments for UI
     save_post_meta(

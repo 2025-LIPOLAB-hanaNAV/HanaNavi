@@ -1,7 +1,11 @@
 from datetime import datetime
 from typing import List, Tuple, Dict, Any, Optional
 
-from .sqlite_fts import bm25_search
+import os as _os
+if _os.getenv("IR_BACKEND", "sqlite").lower() == "opensearch":
+    from .opensearch_ir import bm25_search  # type: ignore
+else:
+    from .sqlite_fts import bm25_search
 from .qdrant_vec import vector_search
 from .rrf import rrf
 from app.models.reranker import rerank

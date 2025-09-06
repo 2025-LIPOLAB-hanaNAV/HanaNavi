@@ -133,6 +133,7 @@ curl -X POST http://localhost:8002/webhook \
 
 - 사전 준비: Docker(Compose v2), 포트 사용 가능: 11434, 6333, 6379, 5432, 8001/2/3, 5173/5174, 9000/9001
 - 1) 기동: `make up`
+- (옵션) OpenSearch 사용: `docker compose -f docker/docker-compose.yml --profile opensearch up -d opensearch opensearch-dashboards`
 - 2) 모델 풀(태그 변경): `make pull-model MODEL=gemma3:12b-q5_K_M`
 - 3) UI 접속: Board `http://localhost:5173`, Chatbot `http://localhost:5174`
 - 4) 업로드 예시:
@@ -182,6 +183,16 @@ curl -X POST http://localhost:8002/webhook \
 환경 변수는 `.env.example` 참고 후 `.env`에 설정하세요. 로컬 Python/Node 설치 없이 Docker만으로 실행 가능합니다.
 
 참고: 컨테이너에서 로컬 Ollama에 연결하려면 `.env`의 `OLLAMA_BASE_URL`을 `http://host.docker.internal:11434`로 둡니다. Linux에서도 `host.docker.internal`이 동작하도록 compose에 host-gateway 매핑이 포함되어 있습니다.
+
+OpenSearch IR 백엔드
+
+- 기본 IR은 SQLite FTS5이며, 대규모 데이터/고급 검색이 필요할 때 OpenSearch를 사용할 수 있습니다.
+- 활성화:
+  1) `.env`에 `IR_BACKEND=opensearch` 설정
+  2) OpenSearch 기동: `docker compose -f docker/docker-compose.yml --profile opensearch up -d opensearch`
+  3) (옵션) 대시보드: `--profile opensearch up -d opensearch-dashboards` (http://localhost:5601)
+- 인덱싱: worker가 ingest 시 `posts` 인덱스에 문서를 업서트합니다.
+- 검색: rag-api가 BM25(IR)를 OpenSearch로, 벡터는 Qdrant로 질의 후 RRF 융합 → 재랭크
 
 ---
 

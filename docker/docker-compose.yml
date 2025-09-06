@@ -42,6 +42,8 @@ services:
       QDRANT_URL: http://qdrant:6333
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       LLM_MODEL: ${LLM_MODEL:-gemma3:12b}
+      IR_BACKEND: ${IR_BACKEND:-sqlite}
+      OPENSEARCH_URL: ${OPENSEARCH_URL:-http://opensearch:9200}
       SQLITE_PATH: /data/sqlite/ir.db
       USE_RERANK: "1"
       # set to 'onnx' with RERANKER_ONNX_PATH to enable ONNX
@@ -106,6 +108,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - STORAGE_DIR=/data/storage
       - SQLITE_PATH=/data/sqlite/ir.db
+      - IR_BACKEND=${IR_BACKEND:-sqlite}
+      - OPENSEARCH_URL=${OPENSEARCH_URL:-http://opensearch:9200}
     command: ["celery", "-A", "app.worker.celery_app:app", "worker", "--loglevel=info"]
     # Celery worker listening on Redis broker
     volumes:
@@ -142,6 +146,35 @@ services:
     restart: unless-stopped
     mem_limit: 1g
 
+  opensearch:
+    image: opensearchproject/opensearch:2
+    profiles: ["opensearch"]
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch:/usr/share/opensearch/data
+    mem_limit: 2g
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2
+    profiles: ["opensearch"]
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+    depends_on:
+      - opensearch
+    ports:
+      - "5601:5601"
+
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
@@ -164,3 +197,4 @@ volumes:
   pgdata:
   appdata:
   minio:
+  opensearch:

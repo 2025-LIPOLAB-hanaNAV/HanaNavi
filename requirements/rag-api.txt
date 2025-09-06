@@ -8,3 +8,4 @@ transformers
 httpx
 redis
 prometheus-client
+opensearch-py
