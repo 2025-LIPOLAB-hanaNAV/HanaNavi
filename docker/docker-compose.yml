@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant:/qdrant/storage
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+
+  postgres:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dify
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - ollama:/root/.ollama
+    # If you have GPUs, uncomment the following and configure Docker accordingly
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+    # Note: pull the model after starting: `docker exec -it <ollama> ollama pull gemma3:12b`
+
+  rag-api:
+    build:
+      context: ..
+      dockerfile: app/rag-api/Dockerfile
+    depends_on:
+      - qdrant
+      - ollama
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports:
+      - "8001:8000"
+
+  etl-api:
+    build:
+      context: ..
+      dockerfile: app/etl-api/Dockerfile
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8002:8000"
+
+  eval-api:
+    build:
+      context: ..
+      dockerfile: app/eval-api/Dockerfile
+    ports:
+      - "8003:8000"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: app/worker/Dockerfile
+    depends_on:
+      - redis
+    command: ["sleep", "infinity"]
+    # TODO: Replace with Celery/Prefect worker command
+
+volumes:
+  qdrant:
+  redis:
+  pgdata:
+  ollama:
+
