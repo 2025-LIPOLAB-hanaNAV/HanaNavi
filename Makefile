@@ -1,15 +1,9 @@
 COMPOSE = docker compose -f docker/docker-compose.yml
 
-.PHONY: up up-ollama up-no-ollama down ps logs build pull-model
+.PHONY: up down ps logs build pull-model pull-model-local
 
 up:
 	$(COMPOSE) up -d --build
-
-up-ollama:
-	COMPOSE_PROFILES=ollama $(COMPOSE) up -d --build
-
-up-no-ollama:
-	COMPOSE_PROFILES= $(COMPOSE) up -d --build
 
 down:
 	$(COMPOSE) down -v
@@ -25,4 +19,6 @@ build:
 
 MODEL ?= gemma3:12b
 pull-model:
-	$(COMPOSE) exec ollama ollama pull $(MODEL)
+	ollama pull $(MODEL)
+
+pull-model-local: pull-model

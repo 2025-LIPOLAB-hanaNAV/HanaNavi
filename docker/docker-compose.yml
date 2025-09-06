@@ -30,24 +30,6 @@ services:
       - pgdata:/var/lib/postgresql/data
     mem_limit: 1g
 
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    profiles: ["ollama"]
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_ORIGINS=*
-    volumes:
-      - ollama:/root/.ollama
-    mem_limit: 2g
-    # If you have GPUs, uncomment the following and configure Docker accordingly
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - capabilities: [gpu]
-    # Note: pull the model after starting: `docker exec -it <ollama> ollama pull gemma3:12b`
 
   rag-api:
     build:
@@ -55,7 +37,6 @@ services:
       dockerfile: app/rag-api/Dockerfile
     depends_on:
       - qdrant
-      - ollama
     environment:
       QDRANT_URL: http://qdrant:6333
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
@@ -163,6 +144,5 @@ volumes:
   qdrant:
   redis:
   pgdata:
-  ollama:
   appdata:
   minio:

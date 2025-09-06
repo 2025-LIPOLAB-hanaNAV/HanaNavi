@@ -75,14 +75,15 @@ cp .env.example .env
 make up
 ```
 
-3) 모델 준비(Ollama 사용 시):
+3) 모델 준비(Ollama 로컬 사용):
 
 ```bash
-# 기본(12B):
-make up-ollama   # 도커 Ollama 포함 기동
-make pull-model  # 컨테이너 안에 모델 pull
+# 로컬 Ollama가 실행 중이어야 합니다 (11434). 모델 다운로드:
+ollama pull gemma3:12b
+# 또는
+make pull-model
 
-# Q5_K_M 등 다른 태그 사용 시:
+# Q5_K_M 등 태그 변경 시:
 make pull-model MODEL=gemma3:12b-q5_K_M
 ```
 
@@ -130,9 +131,8 @@ curl -X POST http://localhost:8002/webhook \
 ## 🐳 Docker Quickstart (요약)
 
 - 사전 준비: Docker(Compose v2), 포트 사용 가능: 11434, 6333, 6379, 5432, 8001/2/3, 5173/5174, 9000/9001
-- 1) 기동(외부 Ollama 사용): `make up`
-- 2) 기동(도커 Ollama 사용): `make up-ollama` → `make pull-model`
-- 3) 모델 풀(태그 변경): `make pull-model MODEL=gemma3:12b-q5_K_M`
+- 1) 기동: `make up`
+- 2) 모델 풀(태그 변경): `make pull-model MODEL=gemma3:12b-q5_K_M`
 - 3) UI 접속: Board `http://localhost:5173`, Chatbot `http://localhost:5174`
 - 4) 업로드 예시:
   ```bash
@@ -174,16 +174,7 @@ curl -X POST http://localhost:8002/webhook \
 
 환경 변수는 `.env.example` 참고 후 `.env`에 설정하세요. 로컬 Python/Node 설치 없이 Docker만으로 실행 가능합니다.
 
-### Ollama 선택 옵션
-- 외부(로컬) Ollama 사용 시(기본):
-  - 로컬에서 Ollama가 11434 포트로 실행 중이어야 합니다.
-  - `.env`에 `OLLAMA_BASE_URL=http://host.docker.internal:11434` 지정
-  - `make up` (프로필 미사용 → ollama 컨테이너 미기동)
-- 도커 Ollama 사용 시:
-  - `make up-ollama` (ollama 프로필 포함)
-  - `make pull-model`로 모델 풀
-  - 기본 `OLLAMA_BASE_URL`은 컨테이너 간 주소(`http://ollama:11434`)가 사용됩니다.
-참고: Linux에서도 `host.docker.internal`이 동작하도록 `extra_hosts: host-gateway` 매핑을 추가해두었습니다.
+참고: 컨테이너에서 로컬 Ollama에 연결하려면 `.env`의 `OLLAMA_BASE_URL`을 `http://host.docker.internal:11434`로 둡니다. Linux에서도 `host.docker.internal`이 동작하도록 compose에 host-gateway 매핑이 포함되어 있습니다.
 
 ---
 
