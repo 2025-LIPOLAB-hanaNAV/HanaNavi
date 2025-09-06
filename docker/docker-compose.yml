@@ -57,6 +57,8 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_BASE_URL=http://ollama:11434
       - SQLITE_PATH=/data/sqlite/ir.db
+      - USE_RERANK=1
+      - RERANK_BACKEND=st # set to 'onnx' with RERANKER_ONNX_PATH to enable ONNX
     ports:
       - "8001:8000"
     volumes:

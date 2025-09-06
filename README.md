@@ -105,6 +105,12 @@ curl -X POST http://localhost:8002/webhook \
 - Sentence-Transformers 기반 임베딩 사용 시 `.env`에 `USE_ST=1` 설정
 - 모델: `EMBEDDING_MODEL=dragonkue/snowflake-arctic-embed-l-v2.0-ko` (기본)
 
+재랭크(bge-reranker-small):
+
+- 기본값: ST CrossEncoder 백엔드(`RERANK_BACKEND=st`)로 CPU 동작
+- ONNX 사용 시: 모델 ONNX 파일을 볼륨에 두고 `RERANK_BACKEND=onnx`, `RERANKER_ONNX_PATH=/models/bge-reranker-small.onnx` 지정
+- 가중치: `RERANK_ALPHA=0.7` (CE 점수 0.7 + RRF 0.3)
+
 ---
 
 ## 📊 평가 (LLM as a Judge)

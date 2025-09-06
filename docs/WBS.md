@@ -40,7 +40,7 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 - [x] Qdrant 컬렉션 생성 (1024d, cosine, HNSW)
 - [x] SQLite FTS5 인덱스 (title/body/tags)
 - [x] Hybrid Search Adapter: BM25+Vector → RRF (MVP)
-- [ ] Rerank: bge-reranker-small (ONNX/CPU)
+- [x] Rerank: bge-reranker-small (ONNX/CPU, ST fallback)
 - [x] 최신성 부스트(posted_at) 소규모 가중치 적용
 
 ---

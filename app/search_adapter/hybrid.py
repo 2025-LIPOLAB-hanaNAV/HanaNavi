@@ -39,11 +39,15 @@ def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
     for doc_id, score in fused:
         date_str = str(payload_map.get(doc_id, {}).get("date", ""))
         score += _recency_boost(date_str)
-        rescored.append((doc_id, score))
+        # Include text for reranker
+        text = payload_map.get(doc_id, {}).get("text") or payload_map.get(doc_id, {}).get(
+            "snippet", ""
+        )
+        rescored.append((doc_id, score, text))
 
-    reranked = rerank(rescored)
+    reranked = rerank(query, rescored[: max(20, top_k)], top_k=top_k)
     results: List[Dict[str, Any]] = []
-    for doc_id, score in reranked[:top_k]:
+    for doc_id, score in reranked:
         payload = payload_map.get(doc_id, {})
         title = payload.get("title") or payload.get("post_id") or doc_id
         text = payload.get("text") or payload.get("snippet") or ""
