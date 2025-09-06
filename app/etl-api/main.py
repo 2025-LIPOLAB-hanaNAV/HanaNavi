@@ -42,6 +42,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+    from fastapi.responses import Response
+
+    REQ_COUNTER = Counter("etl_requests_total", "Total requests", ["path"])  # type: ignore
+
+    @app.middleware("http")
+    async def _metrics_middleware(request, call_next):  # type: ignore
+        response = await call_next(request)
+        try:
+            REQ_COUNTER.labels(path=request.url.path).inc()  # type: ignore
+        except Exception:
+            pass
+        return response
+
+    @app.get("/metrics")
+    def metrics():  # type: ignore
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+except Exception:
+    pass
+
 
 @app.get("/health")
 def health() -> Dict[str, str]:

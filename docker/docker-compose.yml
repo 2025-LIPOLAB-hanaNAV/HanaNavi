@@ -8,6 +8,7 @@ services:
       - "6333:6333"
     volumes:
       - qdrant:/qdrant/storage
+    mem_limit: 1g
 
   redis:
     image: redis:7
@@ -16,6 +17,7 @@ services:
       - "6379:6379"
     volumes:
       - redis:/data
+    mem_limit: 512m
 
   postgres:
     image: postgres:14
@@ -28,6 +30,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    mem_limit: 1g
 
   ollama:
     image: ollama/ollama:latest
@@ -38,6 +41,7 @@ services:
       - OLLAMA_ORIGINS=*
     volumes:
       - ollama:/root/.ollama
+    mem_limit: 2g
     # If you have GPUs, uncomment the following and configure Docker accordingly
     # deploy:
     #   resources:
@@ -69,6 +73,7 @@ services:
       - "8001:8000"
     volumes:
       - appdata:/data
+    mem_limit: 1g
 
   etl-api:
     build:
@@ -85,6 +90,7 @@ services:
       - "8002:8000"
     volumes:
       - appdata:/data
+    mem_limit: 512m
 
   eval-api:
     build:
@@ -101,6 +107,7 @@ services:
       - "8003:8000"
     volumes:
       - appdata:/data
+    mem_limit: 512m
 
   worker:
     build:
@@ -116,6 +123,7 @@ services:
     # Celery worker listening on Redis broker
     volumes:
       - appdata:/data
+    mem_limit: 1g
 
   board:
     build:
@@ -123,6 +131,7 @@ services:
       dockerfile: ui/board-react/Dockerfile
     ports:
       - "5173:80"
+    mem_limit: 256m
 
   chatbot:
     build:
@@ -130,6 +139,21 @@ services:
       dockerfile: ui/chatbot-react/Dockerfile
     ports:
       - "5174:80"
+    mem_limit: 256m
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio:/data
+    restart: unless-stopped
+    mem_limit: 1g
 
 volumes:
   qdrant:
@@ -137,3 +161,4 @@ volumes:
   pgdata:
   ollama:
   appdata:
+  minio:

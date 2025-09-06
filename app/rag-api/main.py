@@ -4,6 +4,7 @@ import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.search_adapter.hybrid import hybrid_search as do_hybrid
@@ -42,6 +43,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus metrics
+try:
+    from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+
+    REQ_COUNTER = Counter("rag_requests_total", "Total requests", ["path"])  # type: ignore
+
+    @app.middleware("http")
+    async def _metrics_middleware(request, call_next):  # type: ignore
+        response = await call_next(request)
+        try:
+            REQ_COUNTER.labels(path=request.url.path).inc()  # type: ignore
+        except Exception:
+            pass
+        return response
+
+    @app.get("/metrics")
+    def metrics():  # type: ignore
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+except Exception:
+    pass
 
 # LLM concurrency limits
 import os as _os

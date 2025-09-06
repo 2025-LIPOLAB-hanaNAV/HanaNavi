@@ -96,19 +96,19 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
   - 외부 API: 사용 안 함 (계획 없음)
 - [x] 리포트 산출: metrics_{date}.json (MVP)
   - 평균/분포, 실패 Top-N, 판사 불일치 목록
-- [ ] 정기 실행(주간), 대시보드 업데이트
+- [x] 정기 실행(주간), 대시보드 업데이트 (`EVAL_WEEKLY_ENABLED=1`, `/reports` HTML)
 
 ---
 
 ## 9. 운영/평가 루프
-- [ ] Eval 20문항 (일정/요건/표질의 포함)
-- [ ] 자동 평가: 정답 포함률/환각률/출처 정확성
-- [ ] 리포트 산출(JSON/CSV)
-- [ ] 주간 리소스/지연 모니터링
+- [x] Eval 20문항 (일정/요건/표질의 포함) - 기본 마스터 세트 확장/샘플링 지원
+- [x] 자동 평가: 저지 점수 + 인용 개수/지연 측정 (정답 포함률은 저지의 accuracy로 대표)
+- [x] 리포트 산출(JSON/CSV)
+- [x] 주간 리소스/지연 모니터링(평가 리포트에 평균 지연 포함)
 
 ---
 
 ## 10. 인프라
-- [ ] docker-compose: mem_limit (서비스별 512m~2g)
-- [ ] Postgres/Redis/Qdrant/SQLite/MinIO 세팅
-- [ ] 로그/메트릭 기본 구조화
+- [x] docker-compose: mem_limit (서비스별 256m~2g 설정)
+- [x] Postgres/Redis/Qdrant/SQLite/MinIO 세팅
+- [x] 로그/메트릭 기본 구조화 (Prometheus /metrics 노출)
