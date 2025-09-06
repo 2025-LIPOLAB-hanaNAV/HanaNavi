@@ -72,8 +72,13 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/data/storage
+      - PUBLIC_BASE_URL=http://localhost:8002
+      - INTERNAL_BASE_URL=http://etl-api:8000
     ports:
       - "8002:8000"
+    volumes:
+      - appdata:/data
 
   eval-api:
     build:
@@ -100,6 +105,13 @@ services:
     # Celery worker listening on Redis broker
     volumes:
       - appdata:/data
+
+  board:
+    build:
+      context: ..
+      dockerfile: ui/board-react/Dockerfile
+    ports:
+      - "5173:80"
 
 volumes:
   qdrant:

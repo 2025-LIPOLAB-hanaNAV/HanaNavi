@@ -1,6 +1,9 @@
 from typing import Optional, Dict, Any
+import os
+import hashlib
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 try:
@@ -18,6 +21,11 @@ class WebhookEvent(BaseModel):
 
 
 app = FastAPI(title="etl-api", version="0.1.0")
+
+STORAGE_DIR = os.getenv("STORAGE_DIR", "/data/storage")
+UPLOAD_DIR = os.path.join(STORAGE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
 
 
 @app.get("/health")
@@ -39,3 +47,41 @@ async def webhook(event: WebhookEvent) -> Dict[str, Any]:
 async def ingest_webhook(event: WebhookEvent) -> Dict[str, Any]:
     """Alias endpoint per WBS spec."""
     return await webhook(event)
+
+
+def _sha1_fileobj(fobj) -> str:
+    h = hashlib.sha1()
+    while True:
+        chunk = fobj.read(8192)
+        if not chunk:
+            break
+        h.update(chunk)
+    return h.hexdigest()
+
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="filename missing")
+    safe_name = os.path.basename(file.filename)
+    dest_path = os.path.join(UPLOAD_DIR, safe_name)
+
+    # Write and compute sha1
+    with open(dest_path, "wb") as out:
+        content = await file.read()
+        out.write(content)
+    # Reopen for hashing to avoid large memory
+    with open(dest_path, "rb") as fin:
+        sha1 = _sha1_fileobj(fin)
+
+    public_base = os.getenv("PUBLIC_BASE_URL", "http://localhost:8002")
+    internal_base = os.getenv("INTERNAL_BASE_URL", "http://etl-api:8000")
+    rel = f"/files/{safe_name}"
+    return {
+        "filename": safe_name,
+        "sha1": sha1,
+        "size": os.path.getsize(dest_path),
+        "content_type": file.content_type,
+        "url": internal_base + rel,
+        "public_url": public_base + rel,
+    }

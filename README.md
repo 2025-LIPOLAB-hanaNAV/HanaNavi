@@ -48,7 +48,7 @@ app/
   ├── models/         # LLM/임베딩 초기화
   └── utils/          # 공용 유틸리티
 ui/
-  ├── board-react/    # 게시판 UI
+  ├── board-react/    # 게시판 UI (글 작성/첨부 업로드)
   └── chatbot-react/  # 챗봇 UI
 docker/
   └── docker-compose.yml
@@ -136,3 +136,7 @@ curl -X POST http://localhost:8002/webhook \
 - [ ] 평가 루프 구축
 
 개발 진행에 따라 README를 지속 업데이트합니다.
+게시판 UI 실행:
+
+- Docker: `docker compose -f docker/docker-compose.yml up -d board`
+- 브라우저에서 http://localhost:5173 접속 → 글 작성/첨부 업로드 → etl-api 연동
