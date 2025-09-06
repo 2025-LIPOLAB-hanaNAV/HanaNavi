@@ -83,12 +83,13 @@ services:
       dockerfile: app/worker/Dockerfile
     depends_on:
       - redis
-    command: ["sleep", "infinity"]
-    # TODO: Replace with Celery/Prefect worker command
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    command: ["celery", "-A", "app.worker.celery_app:app", "worker", "--loglevel=info"]
+    # Celery worker listening on Redis broker
 
 volumes:
   qdrant:
   redis:
   pgdata:
   ollama:
-

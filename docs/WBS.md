@@ -110,3 +110,4 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 - [ ] docker-compose: mem_limit (서비스별 512m~2g)
 - [ ] Postgres/Redis/Qdrant/SQLite/MinIO 세팅
 - [ ] 로그/메트릭 기본 구조화
+

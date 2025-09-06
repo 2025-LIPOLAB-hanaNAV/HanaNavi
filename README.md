@@ -62,14 +62,38 @@ reports/
 
 ---
 
-## 🚀 실행 (예정)
-개발 중입니다. 실행 방법은 점진적으로 업데이트될 예정입니다.
+## 🚀 실행
+1) 환경변수 템플릿 복사:
 
-예상 플로우:
-1. `docker-compose up` 으로 Postgres, Redis, Qdrant, Dify 기동
-2. `etl-api`와 `worker` 실행 → 게시판 이벤트 처리
-3. `rag-api` 실행 → `/rag/query` 엔드포인트 제공
-4. UI(React) 실행 → Chatbot/Board 인터페이스 제공
+```bash
+cp .env.example .env
+```
+
+2) 전체 스택 기동(Qdrant/Redis/Postgres/Ollama + APIs/worker):
+
+```bash
+make up
+```
+
+3) 처음 한 번 Gemma3 모델 다운로드(Ollama):
+
+```bash
+make pull-model
+```
+
+4) 헬스체크:
+
+- etl-api: http://localhost:8002/health
+- rag-api: http://localhost:8001/health
+- eval-api: http://localhost:8003/health
+
+5) 웹훅 테스트(작업 큐에 태스크 등록):
+
+```bash
+curl -X POST http://localhost:8002/webhook \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"post_created","post_id":123,"url":"https://example"}'
+```
 
 ---
 

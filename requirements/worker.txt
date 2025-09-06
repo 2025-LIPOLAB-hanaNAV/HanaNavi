@@ -1,0 +1,7 @@
+celery>=5
+redis
+qdrant-client
+pypdf
+openpyxl
+python-docx
+

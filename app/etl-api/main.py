@@ -3,6 +3,12 @@ from typing import Optional, Dict, Any
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+try:
+    # Celery is optional in local dev without worker
+    from app.worker.tasks import ingest_from_webhook  # type: ignore
+except Exception:  # pragma: no cover
+    ingest_from_webhook = None  # type: ignore
+
 
 class WebhookEvent(BaseModel):
     action: str
@@ -21,6 +27,9 @@ def health() -> Dict[str, str]:
 
 @app.post("/webhook")
 async def webhook(event: WebhookEvent) -> Dict[str, Any]:
-    # TODO: enqueue job for worker (download → parse → chunk → index)
-    return {"status": "accepted", "event": event.model_dump()}
-
+    payload = event.model_dump()
+    task_id = None
+    if ingest_from_webhook:
+        async_result = ingest_from_webhook.delay(payload)  # type: ignore
+        task_id = async_result.id
+    return {"status": "accepted", "task_id": task_id, "event": payload}

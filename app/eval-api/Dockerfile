@@ -5,13 +5,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY app /app/app
+COPY requirements/eval-api.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-RUN pip install --no-cache-dir fastapi "uvicorn[standard]"
+COPY app /app/app
 
 WORKDIR /app/app/eval-api
 
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
