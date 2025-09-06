@@ -9,4 +9,4 @@ def _redis_url() -> str:
 app = Celery("worker", broker=_redis_url(), backend=_redis_url())
 app.conf.task_routes = {"app.worker.tasks.*": {"queue": "default"}}
 app.conf.task_default_queue = "default"
-
+app.conf.imports = ("app.worker.tasks",)
