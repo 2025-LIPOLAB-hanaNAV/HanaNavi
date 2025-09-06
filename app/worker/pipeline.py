@@ -11,7 +11,7 @@ from app.parser.docx_parser import parse_docx
 from app.worker.downloader import maybe_download
 from app.worker.chunker import chunk_texts
 from app.indexer.index_qdrant import upsert_embeddings
-from app.indexer.index_sqlite_fts5 import index_post
+from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attachments
 
 
 def _sha1(data: bytes) -> str:
@@ -115,6 +115,18 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         posted_at=date,
         severity=str(event.get("severity", "")),
     )
+
+    # 7) Save meta + attachments for UI
+    save_post_meta(
+        sqlite_path,
+        post_id=post_id,
+        title=title,
+        category=category,
+        posted_at=date,
+        severity=str(event.get("severity", "")),
+    )
+    if attachment_infos:
+        save_attachments(sqlite_path, post_id=post_id, items=attachment_infos)
 
     return {
         "post_id": post_id,

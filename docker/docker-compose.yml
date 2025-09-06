@@ -113,6 +113,13 @@ services:
     ports:
       - "5173:80"
 
+  chatbot:
+    build:
+      context: ..
+      dockerfile: ui/chatbot-react/Dockerfile
+    ports:
+      - "5174:80"
+
 volumes:
   qdrant:
   redis:

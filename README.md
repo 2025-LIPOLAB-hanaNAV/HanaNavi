@@ -49,7 +49,7 @@ app/
   └── utils/          # 공용 유틸리티
 ui/
   ├── board-react/    # 게시판 UI (글 작성/첨부 업로드)
-  └── chatbot-react/  # 챗봇 UI
+  └── chatbot-react/  # 챗봇 UI (질문/답변/출처 + 첨부 미리보기)
 docker/
   └── docker-compose.yml
 docs/
@@ -140,3 +140,8 @@ curl -X POST http://localhost:8002/webhook \
 
 - Docker: `docker compose -f docker/docker-compose.yml up -d board`
 - 브라우저에서 http://localhost:5173 접속 → 글 작성/첨부 업로드 → etl-api 연동
+
+챗봇 UI 실행:
+
+- Docker: `docker compose -f docker/docker-compose.yml up -d chatbot`
+- 브라우저에서 http://localhost:5174 접속 → 질문 입력 → 답변/출처 확인 → '미리보기'로 첨부 확인(PDF 임베드)

@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.search_adapter.hybrid import hybrid_search as do_hybrid
@@ -18,6 +19,7 @@ class SearchResult(BaseModel):
     score: float
     snippet: str
     source: str  # document name + page/sheet:cell
+    post_id: str | None = None
 
 
 class SearchResponse(BaseModel):
@@ -25,6 +27,15 @@ class SearchResponse(BaseModel):
 
 
 app = FastAPI(title="rag-api", version="0.1.0")
+
+# CORS for Chatbot UI
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -41,6 +52,7 @@ def hybrid_search(req: SearchRequest) -> SearchResponse:
             score=r["score"],
             snippet=r.get("snippet", ""),
             source=r.get("source", ""),
+            post_id=r.get("post_id"),
         )
         for r in rows
     ]
@@ -75,7 +87,12 @@ def rag_query(req: RagRequest) -> RagResponse:
     hits = do_hybrid(req.query, top_k=max(10, req.top_k))
     ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
     cits = [
-        {"id": h["id"], "title": h.get("title"), "source": h.get("source")}
+        {
+            "id": h["id"],
+            "title": h.get("title"),
+            "source": h.get("source"),
+            "post_id": h.get("post_id"),
+        }
         for h in hits[: req.top_k]
     ]
 

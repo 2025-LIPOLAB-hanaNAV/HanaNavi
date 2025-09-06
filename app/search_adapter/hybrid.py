@@ -59,6 +59,7 @@ def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
                 "snippet": text[:300],
                 "source": source,
                 "title": title,
+                "post_id": payload.get("post_id"),
             }
         )
     return results

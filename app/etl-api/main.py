@@ -3,8 +3,10 @@ import os
 import hashlib
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from .attachments import get_attachments
 
 try:
     # Celery is optional in local dev without worker
@@ -26,6 +28,15 @@ STORAGE_DIR = os.getenv("STORAGE_DIR", "/data/storage")
 UPLOAD_DIR = os.path.join(STORAGE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
+
+# CORS for local dev UIs
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -85,3 +96,10 @@ async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
         "url": internal_base + rel,
         "public_url": public_base + rel,
     }
+
+
+@app.get("/posts/{post_id}/attachments")
+async def list_post_attachments(post_id: str) -> Dict[str, Any]:
+    public_base = os.getenv("PUBLIC_BASE_URL", "http://localhost:8002")
+    items = get_attachments(post_id, public_base)
+    return {"post_id": post_id, "attachments": items}
