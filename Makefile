@@ -17,6 +17,6 @@ logs:
 build:
 	$(COMPOSE) build --no-cache
 
+MODEL ?= gemma3:12b
 pull-model:
-	$(COMPOSE) exec ollama ollama pull gemma3:12b
-
+	$(COMPOSE) exec ollama ollama pull $(MODEL)

@@ -66,10 +66,10 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ---
 
 ## 6. 모델
-- [ ] Ollama/llama.cpp 기동 (Gemma3 12B)
-- [ ] 양자화: Q4_K_M (기본), Q5_K_M (고품질)
-- [ ] 동시성: 12B(2–4), 27B(1–2)
-- [ ] 스트리밍 SSE + 타임아웃 정책
+- [x] Ollama/llama.cpp 기동 (Gemma3 12B) — docker-compose `ollama` 서비스, Make `pull-model`
+- [x] 양자화: Q4_K_M(기본), Q5_K_M(옵션) — Make `MODEL=` 파라미터 및 README 가이드
+- [x] 동시성: 12B(2–4), 27B(1–2) — `LLM_MAX_SESSIONS` 세마포어로 제한
+- [x] 스트리밍 SSE + 타임아웃 정책 — `/rag/stream` SSE, `LLM_TIMEOUT`
 
 ---
 

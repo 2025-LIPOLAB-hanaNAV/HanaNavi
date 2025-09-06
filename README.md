@@ -78,7 +78,11 @@ make up
 3) 처음 한 번 Gemma3 모델 다운로드(Ollama):
 
 ```bash
+# 기본(12B):
 make pull-model
+
+# Q5_K_M 등 다른 태그 사용 시:
+make pull-model MODEL=gemma3:12b-q5_K_M
 ```
 
 4) 헬스체크:
@@ -145,3 +149,12 @@ curl -X POST http://localhost:8002/webhook \
 
 - Docker: `docker compose -f docker/docker-compose.yml up -d chatbot`
 - 브라우저에서 http://localhost:5174 접속 → 질문 입력 → 답변/출처 확인 → '미리보기'로 첨부 확인(PDF 임베드)
+
+모델 설정
+
+- 서비스: `ollama` 컨테이너에서 로컬 LLM 서빙(OpenAI 호환은 선택)
+- 모델 선택: `.env`에 `LLM_MODEL` 지정(기본 `gemma3:12b`)
+- 동시성: `.env`에 `LLM_MAX_SESSIONS`로 제한(12B: 2–4 권장, 27B: 1–2 권장)
+- 타임아웃: `.env`에 `LLM_TIMEOUT`(초) 설정
+- 스트리밍: `POST /rag/stream` SSE 엔드포인트 제공
+- OpenAI-Compat 사용 시: `.env`에 `LLM_API=openai`와 `OLLAMA_BASE_URL`을 해당 호환 서버 주소로 설정

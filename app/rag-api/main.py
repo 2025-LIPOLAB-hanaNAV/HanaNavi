@@ -1,4 +1,6 @@
 from typing import List, Dict, Any
+import asyncio
+import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +42,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# LLM concurrency limits
+import os as _os
+_max_sessions = int(_os.getenv("LLM_MAX_SESSIONS", "4"))
+_llm_sem_async = asyncio.Semaphore(_max_sessions)
+_llm_sem_thread = threading.BoundedSemaphore(_max_sessions)
 
 
 @app.get("/health")
@@ -110,7 +118,8 @@ def rag_query(req: RagRequest) -> RagResponse:
         "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
     )
     _ = prompt  # unused when client is stub
-    answer = client.chat([{"role": "user", "content": prompt}])
+    with _llm_sem_thread:
+        answer = client.chat([{"role": "user", "content": prompt}])
     if not answer or answer.startswith("Not implemented"):
         # Fallback answer for stub
         answer = "(stub) 컨텍스트 기반 초안 답변. Citations: " + ", ".join(
@@ -126,6 +135,54 @@ def rag_query(req: RagRequest) -> RagResponse:
             cits = []
 
     return RagResponse(answer=answer, citations=cits, policy=policy)
+
+
+from fastapi.responses import StreamingResponse
+
+
+@app.post("/rag/stream")
+async def rag_stream(req: RagRequest):
+    mode = req.mode
+    if mode == "auto":
+        mode = "table" if _detect_table_mode(req.query) else "normal"
+
+    hits = do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
+    ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
+    cits = [
+        {
+            "id": h["id"],
+            "title": h.get("title"),
+            "source": h.get("source"),
+            "post_id": h.get("post_id"),
+        }
+        for h in hits[: req.top_k]
+    ]
+
+    client = LLMClient()
+    prompt = (
+        "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
+        "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
+        f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
+        "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
+    )
+
+    async def _gen():
+        async with _llm_sem_async:
+            yield "event: start\n\n"
+            try:
+                for delta in client.chat_stream([{ "role": "user", "content": prompt }]):
+                    if not delta:
+                        continue
+                    yield f"data: {delta}\n\n"
+            except Exception:
+                yield "event: error\n\n"
+            finally:
+                import json as _json
+                yield "event: citations\n"
+                yield f"data: {_json.dumps(cits, ensure_ascii=False)}\n\n"
+                yield "event: end\n\n"
+
+    return StreamingResponse(_gen(), media_type="text/event-stream")
 
 
 class FeedbackRequest(BaseModel):
