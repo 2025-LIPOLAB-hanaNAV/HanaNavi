@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 from .sqlite_fts import bm25_search
 from .qdrant_vec import vector_search
@@ -18,7 +18,26 @@ def _recency_boost(date_str: str) -> float:
         return 0.0
 
 
-def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
+def _pass_filters(payload: Dict[str, Any], filters: Dict[str, Any]) -> bool:
+    if not filters:
+        return True
+    cat = filters.get("category")
+    ft = filters.get("filetype")
+    df = filters.get("date_from")
+    dt = filters.get("date_to")
+    if cat and str(payload.get("category", "")) != str(cat):
+        return False
+    if ft and str(payload.get("filetype", "")) != str(ft):
+        return False
+    date_str = str(payload.get("date", payload.get("posted_at", "")))
+    if df and date_str and date_str < str(df):
+        return False
+    if dt and date_str and date_str > str(dt):
+        return False
+    return True
+
+
+def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     bm25 = bm25_search(query, top_k=50)
     vec = vector_search(query, top_k=50)
 
@@ -34,7 +53,7 @@ def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
     for doc_id, _s, payload in vec:
         payload_map[doc_id] = {**payload_map.get(doc_id, {}), **payload}
 
-    # Apply small recency boost
+    # Apply filters and small recency boost
     rescored = []
     for doc_id, score in fused:
         date_str = str(payload_map.get(doc_id, {}).get("date", ""))
@@ -43,7 +62,8 @@ def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
         text = payload_map.get(doc_id, {}).get("text") or payload_map.get(doc_id, {}).get(
             "snippet", ""
         )
-        rescored.append((doc_id, score, text))
+        if not filters or _pass_filters(payload_map.get(doc_id, {}), filters):
+            rescored.append((doc_id, score, text))
 
     reranked = rerank(query, rescored[: max(20, top_k)], top_k=top_k)
     results: List[Dict[str, Any]] = []
@@ -60,6 +80,9 @@ def hybrid_search(query: str, top_k: int = 20) -> List[Dict[str, Any]]:
                 "source": source,
                 "title": title,
                 "post_id": payload.get("post_id"),
+                "filetype": payload.get("filetype"),
+                "posted_at": payload.get("date") or payload.get("posted_at"),
+                "category": payload.get("category"),
             }
         )
     return results

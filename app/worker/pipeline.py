@@ -100,6 +100,8 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
                 "category": category,
                 "tags": tags,
                 "source": f"{title}#chunk:{i}",
+                "filetype": filetype,
+                "posted_at": date,
             }
         )
     upsert_embeddings("post_chunks", points, dim=1024)

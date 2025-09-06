@@ -7,6 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from .attachments import get_attachments
+try:
+    import openpyxl
+except Exception:  # pragma: no cover
+    openpyxl = None  # type: ignore
 
 try:
     # Celery is optional in local dev without worker
@@ -103,3 +107,20 @@ async def list_post_attachments(post_id: str) -> Dict[str, Any]:
     public_base = os.getenv("PUBLIC_BASE_URL", "http://localhost:8002")
     items = get_attachments(post_id, public_base)
     return {"post_id": post_id, "attachments": items}
+
+
+@app.get("/preview/xlsx")
+async def preview_xlsx(filename: str, sheet: str | None = None, range: str | None = None) -> Dict[str, Any]:
+    if not openpyxl:
+        raise HTTPException(status_code=500, detail="openpyxl not available")
+    path = os.path.join(UPLOAD_DIR, os.path.basename(filename))
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="file not found")
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb[sheet] if sheet and sheet in wb.sheetnames else wb.worksheets[0]
+    rng = range
+    cells = ws[rng] if rng else ws['A1':'D20']
+    data: list[list[str]] = []
+    for row in cells:
+        data.append(["" if c.value is None else str(c.value) for c in row])
+    return {"sheet": ws.title, "range": rng or "A1:D20", "rows": data}

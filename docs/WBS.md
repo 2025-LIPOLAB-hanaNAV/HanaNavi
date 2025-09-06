@@ -57,10 +57,10 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ## 5. UI
 - [x] 게시판 React UI: 글 작성/첨부 (MVP 업로드→웹훅 연동)
 - [x] Chatbot UI: 질문/답변/출처 + 첨부 미리보기(PDF 임베드, 기타 링크)
-- [ ] Chatbot UI: 질문/답변/출처 탭
-- [ ] 첨부 미리보기 (PDF page, XLSX range)
-- [ ] 필터: 기간/카테고리/파일타입
-- [ ] Feedback 버튼 (👍/👎)
+- [x] Chatbot UI: 질문/답변/출처 탭
+- [x] 첨부 미리보기 (PDF page, XLSX range)
+- [x] 필터: 기간/카테고리/파일타입
+- [x] Feedback 버튼 (👍/👎)
 
 ---
 

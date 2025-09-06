@@ -7,11 +7,15 @@ from pydantic import BaseModel
 from app.search_adapter.hybrid import hybrid_search as do_hybrid
 from app.models.llm_client import LLMClient
 from app.utils.policy import enforce_policy
+import os
+import json
+from datetime import datetime
 
 
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 20
+    filters: Dict[str, Any] | None = None
 
 
 class SearchResult(BaseModel):
@@ -45,7 +49,7 @@ def health() -> dict:
 
 @app.post("/search/hybrid", response_model=SearchResponse)
 def hybrid_search(req: SearchRequest) -> SearchResponse:
-    rows = do_hybrid(req.query, top_k=req.top_k)
+    rows = do_hybrid(req.query, top_k=req.top_k, filters=req.filters or {})
     results = [
         SearchResult(
             id=r["id"],
@@ -64,6 +68,7 @@ class RagRequest(BaseModel):
     top_k: int = 8
     mode: str = "auto"  # auto|table|normal
     enforce_policy: bool = True
+    filters: Dict[str, Any] | None = None
 
 
 class RagResponse(BaseModel):
@@ -84,7 +89,7 @@ def rag_query(req: RagRequest) -> RagResponse:
     if mode == "auto":
         mode = "table" if _detect_table_mode(req.query) else "normal"
 
-    hits = do_hybrid(req.query, top_k=max(10, req.top_k))
+    hits = do_hybrid(req.query, top_k=max(10, req.top_k), filters=req.filters or {})
     ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
     cits = [
         {
@@ -121,3 +126,23 @@ def rag_query(req: RagRequest) -> RagResponse:
             cits = []
 
     return RagResponse(answer=answer, citations=cits, policy=policy)
+
+
+class FeedbackRequest(BaseModel):
+    query: str
+    answer: str
+    citations: List[Dict[str, Any]]
+    policy: Dict[str, Any]
+    vote: str  # up|down
+
+
+@app.post("/feedback")
+def feedback(req: FeedbackRequest) -> Dict[str, Any]:
+    fbdir = os.getenv("FEEDBACK_DIR", "/data/feedback")
+    os.makedirs(fbdir, exist_ok=True)
+    item = req.model_dump()
+    item["ts"] = datetime.utcnow().isoformat()
+    path = os.path.join(fbdir, "feedback.jsonl")
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    return {"status": "ok"}
