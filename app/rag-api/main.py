@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.search_adapter.hybrid import hybrid_search as do_hybrid
 from app.models.llm_client import LLMClient
+from app.utils.policy import enforce_policy
 
 
 class SearchRequest(BaseModel):
@@ -50,11 +51,13 @@ class RagRequest(BaseModel):
     query: str
     top_k: int = 8
     mode: str = "auto"  # auto|table|normal
+    enforce_policy: bool = True
 
 
 class RagResponse(BaseModel):
     answer: str
     citations: List[Dict[str, Any]]
+    policy: Dict[str, Any]
 
 
 def _detect_table_mode(q: str) -> bool:
@@ -85,11 +88,19 @@ def rag_query(req: RagRequest) -> RagResponse:
         "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
     )
     _ = prompt  # unused when client is stub
-    answer = client.chat([{ "role": "user", "content": prompt }])
+    answer = client.chat([{"role": "user", "content": prompt}])
     if not answer or answer.startswith("Not implemented"):
         # Fallback answer for stub
         answer = "(stub) 컨텍스트 기반 초안 답변. Citations: " + ", ".join(
             [f"[{i+1}]" for i in range(min(len(cits), req.top_k))]
         )
+    policy = {"refusal": False, "masked": False, "pii_types": [], "reason": ""}
+    if req.enforce_policy:
+        pol = enforce_policy(req.query, answer)
+        answer = pol["answer"]
+        policy = {k: pol[k] for k in ["refusal", "masked", "pii_types", "reason"]}
+        if pol["refusal"]:
+            # On refusal, strip citations to avoid leaking sensitive refs
+            cits = []
 
-    return RagResponse(answer=answer, citations=cits)
+    return RagResponse(answer=answer, citations=cits, policy=policy)

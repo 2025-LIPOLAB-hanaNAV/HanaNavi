@@ -50,7 +50,7 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 - [x] Table Mode: 엑셀 질문 라우팅(간단 히유리스틱)
 - [x] Normal Mode: 상위 6–8 청크 합성
 - [x] Citations Formatter 적용(문서명+chunk id 기반)
-- [ ] PII/내부정보 거절/마스킹 규칙
+- [x] PII/내부정보 거절/마스킹 규칙 (정책 엔포스먼트)
 
 ---
 

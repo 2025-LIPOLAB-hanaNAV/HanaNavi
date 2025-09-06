@@ -111,6 +111,13 @@ curl -X POST http://localhost:8002/webhook \
 - ONNX 사용 시: 모델 ONNX 파일을 볼륨에 두고 `RERANK_BACKEND=onnx`, `RERANKER_ONNX_PATH=/models/bge-reranker-small.onnx` 지정
 - 가중치: `RERANK_ALPHA=0.7` (CE 점수 0.7 + RRF 0.3)
 
+정책 엔포스먼트(PII/내부정보):
+
+- 기본 활성화: `/rag/query` 요청에서 `enforce_policy: true` (기본값)
+- 거절 규칙: 질의가 전화/이메일/주민등록/계좌 등 PII를 요구하면 거절 응답
+- 마스킹 규칙: 답변 내 이메일/전화/주민등록/카드/API 키 등 패턴 자동 마스킹
+- 응답 필드: `policy.refusal`, `policy.masked`, `policy.pii_types`, `policy.reason`
+
 ---
 
 ## 📊 평가 (LLM as a Judge)
