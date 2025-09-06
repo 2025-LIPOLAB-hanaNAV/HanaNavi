@@ -92,6 +92,11 @@ services:
       dockerfile: app/eval-api/Dockerfile
     environment:
       - REPORTS_DIR=/data/reports
+      - DATASETS_DIR=/app/datasets
+      - RAG_API_BASE=http://rag-api:8000
+      - JUDGE_MODEL=qwen2:32b
+      - JUDGE_API=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
     ports:
       - "8003:8000"
     volumes:

@@ -127,9 +127,12 @@ curl -X POST http://localhost:8002/webhook \
 ---
 
 ## 📊 평가 (LLM as a Judge)
-- Master Set / Refusal Set / PII Exposure Set 평가
-- 자동 리포트: `reports/metrics_{date}.json|csv`
-- 품질 지표: 정확도, 출처 정확성, 환각률, 거절율
+- 데이터셋: `datasets/master/voice_phishing_master_ko.jsonl`, `datasets/refusal/refusal_ko.jsonl`, `datasets/pii/pii_exposure_ko.jsonl`
+- 저지 모델: 기본 Qwen2 32B (Ollama), 대안 Gemma3 27B
+- 실행:
+  - `POST http://localhost:8003/eval/run` body `{ "dataset": "master|refusal|pii" }`
+  - 리포트: `docker/appdata` 볼륨의 `/data/reports/metrics_*.json`
+- 품질 지표: 정확도, 관련성, 가독성, 거절률, PII 탐지율
 
 ---
 

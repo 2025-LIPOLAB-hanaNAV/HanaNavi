@@ -84,16 +84,16 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ---
 
 ## 8. 평가 / LLM as a Judge
-- [ ] 평가 데이터셋 3종 준비:
+- [x] 평가 데이터셋 3종 준비:
   - Master Set (정확도/관련성/가독성)
   - Refusal Set (정책 거절)
   - PII Exposure Set (개인정보 노출)
 - [x] eval-api 서비스 구현(베이직):
   - 입력: question, gold_answer?, policy_rule?
   - 출력: placeholder metrics 파일 기록(`reports/metrics_*.json`)
-- [ ] 저지 모델 서빙:
-  - 내부: Gemma3 7B/9B (판사용)
-  - 외부 API: OpenAI/Anthropic 모델 (fallback)
+- [x] 저지 모델 서빙:
+  - 내부: Qwen2 32B(권장) 또는 Gemma3 27B (대안)
+  - 외부 API: 사용 안 함 (계획 없음)
 - [x] 리포트 산출: metrics_{date}.json (MVP)
   - 평균/분포, 실패 Top-N, 판사 불일치 목록
 - [ ] 정기 실행(주간), 대시보드 업데이트
