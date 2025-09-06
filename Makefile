@@ -1,6 +1,6 @@
 COMPOSE = docker compose -f docker/docker-compose.yml
 
-.PHONY: up down ps logs build rebuild build-apis build-ui up-rag up-etl restart pull-model pull-model-local
+.PHONY: up down ps logs build rebuild build-apis build-ui up-rag up-etl restart pull-model pull-model-local shell-ollama
 
 up:
 	$(COMPOSE) up -d
@@ -37,6 +37,10 @@ restart:
 
 MODEL ?= gemma3:12b
 pull-model:
+	$(COMPOSE) exec ollama ollama pull $(MODEL)
+
+pull-model-local:
 	ollama pull $(MODEL)
 
-pull-model-local: pull-model
+shell-ollama:
+	$(COMPOSE) exec ollama bash -lc "ollama list || true"

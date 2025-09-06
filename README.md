@@ -69,22 +69,23 @@ reports/
 cp .env.example .env
 ```
 
-2) 전체 스택 기동(Qdrant/Redis/Postgres + APIs/worker + UI):
+2) 전체 스택 기동(Qdrant/Redis/Postgres/Ollama + APIs/worker + UI):
 
 ```bash
 make up
 ```
 
-3) 모델 준비(Ollama 로컬 사용):
+3) 모델 준비(Ollama 도커 사용/오프라인 반입):
 
 ```bash
-# 로컬 Ollama가 실행 중이어야 합니다 (11434). 모델 다운로드:
-ollama pull gemma3:12b
-# 또는
+# 컨테이너 안에서 모델 다운로드:
 make pull-model
 
-# Q5_K_M 등 태그 변경 시:
+# Q5_K_M 등 태그 변경:
 make pull-model MODEL=gemma3:12b-q5_K_M
+
+# (옵션) 오프라인 반입: 다른 머신의 ~/.ollama를 서버로 복사한 뒤
+# .env의 OLLAMA_MODELS_HOST_DIR를 해당 경로로 설정하면 컨테이너에 마운트되어 즉시 사용 가능
 ```
 
 4) 헬스체크:
