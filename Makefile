@@ -1,4 +1,5 @@
-COMPOSE = docker compose -f docker/docker-compose.yml
+# Ensure compose reads envs from project root .env
+COMPOSE = docker compose --env-file .env -f docker/docker-compose.yml
 
 .PHONY: up down ps logs build rebuild build-apis build-ui up-rag up-etl restart pull-model pull-model-local shell-ollama
 

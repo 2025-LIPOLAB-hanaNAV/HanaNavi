@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Simple typography tweaks */
+body { @apply bg-gray-50 text-gray-900; }
+a { @apply text-blue-600 hover:underline; }
+input, textarea, select { @apply border border-gray-300 rounded px-3 py-2; }
+button { @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50; }
+
