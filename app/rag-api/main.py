@@ -99,6 +99,7 @@ class RagRequest(BaseModel):
     mode: str = "auto"  # auto|table|normal
     enforce_policy: bool = True
     filters: Dict[str, Any] | None = None
+    history: List[Dict[str, str]] | None = None  # [{role: user|assistant, content: str}]
 
 
 class RagResponse(BaseModel):
@@ -111,6 +112,18 @@ def _detect_table_mode(q: str) -> bool:
     ql = q.lower()
     keywords = ["excel", "xlsx", "표", "시트", "셀", "range", "sheet"]
     return any(k in ql for k in keywords)
+
+
+def _history_text(history: List[Dict[str, str]] | None, max_turns: int = 4) -> str:
+    if not history:
+        return ""
+    h = history[-max_turns:]
+    lines = []
+    for m in h:
+        role = m.get("role", "user")
+        prefix = "사용자" if role == "user" else "도우미"
+        lines.append(f"{prefix}: {m.get('content','')}")
+    return "\n".join(lines)
 
 
 @app.post("/rag/query", response_model=RagResponse)
@@ -133,15 +146,20 @@ def rag_query(req: RagRequest) -> RagResponse:
 
     # Compose prompt (LLM stubbed for now)
     client = LLMClient()
-    prompt = (
+    convo = []
+    hist = _history_text(req.history)
+    if hist:
+        convo.append({"role": "user", "content": f"이전 대화:\n{hist}"})
+        convo.append({"role": "assistant", "content": "확인했습니다."})
+    final_user = (
         "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
         "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
         f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
         "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
     )
-    _ = prompt  # unused when client is stub
+    convo.append({"role": "user", "content": final_user})
     with _llm_sem_thread:
-        answer = client.chat([{"role": "user", "content": prompt}])
+        answer = client.chat(convo)
     if not answer or answer.startswith("Not implemented"):
         # Fallback answer for stub
         answer = "(stub) 컨텍스트 기반 초안 답변. Citations: " + ", ".join(
@@ -181,18 +199,24 @@ async def rag_stream(req: RagRequest):
     ]
 
     client = LLMClient()
-    prompt = (
+    convo = []
+    hist = _history_text(req.history)
+    if hist:
+        convo.append({"role": "user", "content": f"이전 대화:\n{hist}"})
+        convo.append({"role": "assistant", "content": "확인했습니다."})
+    final_user = (
         "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
         "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
         f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
         "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
     )
+    convo.append({"role": "user", "content": final_user})
 
     async def _gen():
         async with _llm_sem_async:
             yield "event: start\n\n"
             try:
-                for delta in client.chat_stream([{ "role": "user", "content": prompt }]):
+                for delta in client.chat_stream(convo):
                     if not delta:
                         continue
                     yield f"data: {delta}\n\n"

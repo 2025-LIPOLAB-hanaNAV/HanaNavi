@@ -17,7 +17,17 @@ const BoardNew: React.FC = () => {
   const [body, setBody] = useState('')
   const [tags, setTags] = useState('')
   const [category, setCategory] = useState('')
-  const [date, setDate] = useState('')
+  const nowLocal = () => {
+    const d = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const mm = pad(d.getMonth()+1)
+    const dd = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const mi = pad(d.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+  }
+  const [date, setDate] = useState(nowLocal())
   const [severity, setSeverity] = useState<'low'|'medium'|'high'|''>('')
   const [files, setFiles] = useState<FileList | null>(null)
   const [uploads, setUploads] = useState<UploadInfo[]>([])
@@ -56,7 +66,7 @@ const BoardNew: React.FC = () => {
         post_id: Number(id),
         title, body,
         tags: tags ? tags.split(',').map(s => s.trim()).filter(Boolean) : [],
-        category, date, severity,
+        category, date: (date || nowLocal()).replace('T', ' '), severity,
         attachments: atts,
       }
 
@@ -64,7 +74,7 @@ const BoardNew: React.FC = () => {
       await fetch(`${ETL_BASE}/ingest/webhook`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(event) }).catch(() => {})
 
       // save locally for board UI
-      const post: PostItem = { id, title, body, tags: event.tags, category, date, severity, attachments: atts, createdAt: new Date().toISOString() }
+      const post: PostItem = { id, title, body, tags: event.tags, category, date: event.date, severity, attachments: atts, createdAt: new Date().toISOString() }
       const current = loadPosts()
       current.unshift(post)
       savePosts(current)
@@ -100,7 +110,7 @@ const BoardNew: React.FC = () => {
           </label>
           <label className="grid gap-1">
             <span className="text-sm text-gray-600">게시일</span>
-            <input value={date} onChange={e=>setDate(e.target.value)} placeholder="YYYY-MM-DD" />
+            <input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)} />
           </label>
           <label className="grid gap-1">
             <span className="text-sm text-gray-600">중요도</span>
@@ -137,4 +147,3 @@ const BoardNew: React.FC = () => {
 }
 
 export default BoardNew
-

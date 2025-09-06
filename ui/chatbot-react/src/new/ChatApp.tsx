@@ -10,6 +10,7 @@ type Message = { role: 'user' | 'assistant'; content: string; citations?: Citati
 const ChatApp: React.FC = () => {
   const RAG_BASE = useMemo(() => import.meta.env.VITE_RAG_BASE || 'http://localhost:8001', [])
   const ETL_BASE = useMemo(() => import.meta.env.VITE_ETL_BASE || 'http://localhost:8002', [])
+  const BOARD_BASE = useMemo(() => import.meta.env.VITE_BOARD_BASE || 'http://localhost:5173', [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -31,10 +32,13 @@ const ChatApp: React.FC = () => {
     abortRef.current = ctrl
 
     try {
+      const history = messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: m.content }))
       const res = await fetch(`${RAG_BASE}/rag/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: user.content, top_k: 8, enforce_policy: true }),
+        body: JSON.stringify({ query: user.content, top_k: 8, enforce_policy: true, history }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
@@ -154,7 +158,12 @@ const ChatApp: React.FC = () => {
                   {(m.citations||[]).map((c, j) => (
                     <li key={j} className="flex justify-between gap-2">
                       <span className="truncate">[{j+1}] {c.title || c.id}</span>
-                      {c.post_id && <a className="text-blue-600" href={`${ETL_BASE}/posts/${c.post_id}/attachments`} target="_blank" rel="noreferrer">보기</a>}
+                      {c.post_id && (
+                        <>
+                          <a className="text-blue-600" href={`${BOARD_BASE}/post/${c.post_id}`} target="_blank" rel="noreferrer">게시글</a>
+                          <a className="text-blue-600 ml-2" href={`${ETL_BASE}/posts/${c.post_id}/attachments`} target="_blank" rel="noreferrer">첨부</a>
+                        </>
+                      )}
                     </li>
                   ))}
                   {(m.citations||[]).length===0 && <li className="text-gray-500">(없음)</li>}

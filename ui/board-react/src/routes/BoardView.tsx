@@ -26,14 +26,16 @@ const BoardView: React.FC = () => {
       <div className="px-4 pb-4">
         <div className="text-sm font-medium mb-1">첨부파일 ({post.attachments.length})</div>
         {post.attachments.length === 0 && <div className="text-sm text-gray-500">첨부 없음</div>}
-        <ul className="list-disc pl-6">
-          {post.attachments.map((a, i) => (
-            <li key={i}>
-              <span className="font-medium">{a.filename}</span>
-              {' '}
-              <a href={a.public_url || a.url} target="_blank" rel="noreferrer">다운로드</a>
-            </li>
-          ))}
+        <ul className="list-disc pl-6 space-y-1">
+          {post.attachments.map((a, i) => {
+            const href = a.public_url || a.url
+            return (
+              <li key={i} className="flex items-center gap-2">
+                <a href={href} download className="font-medium hover:underline" target="_blank" rel="noreferrer">{a.filename}</a>
+                <a href={href} download className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700" target="_blank" rel="noreferrer">다운로드</a>
+              </li>
+            )
+          })}
         </ul>
       </div>
       <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between">
@@ -45,4 +47,3 @@ const BoardView: React.FC = () => {
 }
 
 export default BoardView
-
