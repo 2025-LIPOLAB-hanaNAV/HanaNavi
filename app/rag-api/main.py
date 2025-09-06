@@ -38,8 +38,8 @@ app = FastAPI(title="rag-api", version="0.1.0")
 # CORS for Chatbot UI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Wildcard works only when credentials are disabled
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

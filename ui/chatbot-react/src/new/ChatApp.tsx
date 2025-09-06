@@ -42,30 +42,27 @@ const ChatApp: React.FC = () => {
       const reader = res.body.getReader()
       const dec = new TextDecoder()
       let buffer = ''
+      let pendingEvent: string | null = null
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
         buffer += dec.decode(value, { stream: true })
-        // parse SSE chunks
-        const parts = buffer.split('\n\n')
-        buffer = parts.pop() || ''
-        for (const chunk of parts) {
-          const line = chunk.trim()
-          if (!line) continue
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            setMessages(m => {
-              const copy = [...m]
-              const last = copy[copy.length - 1]
-              if (last && last.role === 'assistant') last.content += data
-              return copy
-            })
-          } else if (line.startsWith('event: citations')) {
-            // next part should be data: json
-            // handled when iteration reaches it
-          } else if (line.startsWith('data:{') || line.startsWith('data: {')) {
+        const chunks = buffer.split('\n\n')
+        buffer = chunks.pop() || ''
+        for (const ev of chunks) {
+          const lines = ev.split('\n').map(l => l.trim()).filter(Boolean)
+          let eventName: string | null = null
+          let dataPayload: string | null = null
+          for (const l of lines) {
+            if (l.startsWith('event:')) eventName = l.slice(6).trim()
+            if (l.startsWith('data:')) dataPayload = (dataPayload || '') + l.slice(5)
+          }
+          if (eventName) pendingEvent = eventName
+          if (!dataPayload) continue
+          // Citations event delivers JSON array; default data lines are text deltas
+          if ((pendingEvent === 'citations') || (dataPayload.startsWith('[') || dataPayload.startsWith('{'))) {
             try {
-              const obj = JSON.parse(line.slice(5))
+              const obj = JSON.parse(dataPayload)
               if (Array.isArray(obj)) {
                 setMessages(m => {
                   const copy = [...m]
@@ -74,7 +71,18 @@ const ChatApp: React.FC = () => {
                   return copy
                 })
               }
-            } catch {}
+            } catch {
+              // ignore parse errors
+            }
+            pendingEvent = null
+          } else {
+            const data = dataPayload
+            setMessages(m => {
+              const copy = [...m]
+              const last = copy[copy.length - 1]
+              if (last && last.role === 'assistant') last.content += data
+              return copy
+            })
           }
         }
       }
@@ -163,4 +171,3 @@ const ChatApp: React.FC = () => {
 }
 
 export default ChatApp
-

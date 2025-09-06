@@ -36,8 +36,8 @@ app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
 # CORS for local dev UIs
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Wildcard works only when credentials are disabled
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
