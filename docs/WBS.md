@@ -26,30 +26,30 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ---
 
 ## 2. ETL
-- [ ] etl-api: `/ingest/webhook` 구현
-- [ ] worker: 첨부 다운로드 + 해시 검증
-- [ ] 파서: PDF / XLSX / DOCX → 텍스트·표·범위
-- [ ] 청킹: 350–450자, overlap 10–15%
-- [ ] 임베딩: snowflake v2 ko, batch 32–64
-- [ ] 업서트: Qdrant + SQLite 색인
-- [ ] 메타: category/filetype/posted_at/severity
+- [x] etl-api: `/ingest/webhook` 구현 (alias `/webhook`)
+- [x] worker: 첨부 다운로드 + 해시 검증(SHA1)
+- [x] 파서: PDF / XLSX / DOCX → 텍스트·표·범위(MVP)
+- [x] 청킹: 350–450자(기본 400), overlap 10–15%(기본 12.5%)
+- [x] 임베딩: snowflake v2 ko (Sentence-Transformers, `USE_ST=1` 옵션), batch 32
+- [x] 업서트: Qdrant + SQLite 색인
+- [x] 메타: category/filetype/posted_at/severity 반영
 
 ---
 
 ## 3. 검색/색인
-- [ ] Qdrant 컬렉션 생성 (1024d, cosine, HNSW)
-- [ ] SQLite FTS5 인덱스 (title/body/tags)
-- [ ] Hybrid Search Adapter: BM25+Vector → RRF
+- [x] Qdrant 컬렉션 생성 (1024d, cosine, HNSW)
+- [x] SQLite FTS5 인덱스 (title/body/tags)
+- [x] Hybrid Search Adapter: BM25+Vector → RRF (MVP)
 - [ ] Rerank: bge-reranker-small (ONNX/CPU)
-- [ ] 최신성 부스트(posted_at)
+- [x] 최신성 부스트(posted_at) 소규모 가중치 적용
 
 ---
 
 ## 4. RAG 파이프라인
-- [ ] rag-api: `/rag/query` (OpenAI-Compat)
-- [ ] Table Mode: 엑셀 질문 라우팅
-- [ ] Normal Mode: 상위 6–8 청크 합성
-- [ ] Citations Formatter 적용
+- [x] rag-api: `/rag/query` (OpenAI-Compat 스타일 JSON)
+- [x] Table Mode: 엑셀 질문 라우팅(간단 히유리스틱)
+- [x] Normal Mode: 상위 6–8 청크 합성
+- [x] Citations Formatter 적용(문서명+chunk id 기반)
 - [ ] PII/내부정보 거절/마스킹 규칙
 
 ---
@@ -72,12 +72,12 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 ---
 
 ## 7. Embedding
-- [ ] Sentence-Transformers 서비스: snowflake v2 ko
-- [ ] 출력 차원 1024 고정
+- [x] Sentence-Transformers 서비스: snowflake v2 ko (옵션)
+- [x] 출력 차원 1024 고정
 - [ ] query/passages 템플릿 분리
-- [ ] mean pooling + L2 normalize
+- [x] mean pooling + L2 normalize
 - [ ] 캐시: 임베딩 해시 재사용
-- [ ] Qdrant 컬렉션 스키마 반영
+- [x] Qdrant 컬렉션 스키마 반영
 
 ---
 
@@ -86,13 +86,13 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
   - Master Set (정확도/관련성/가독성)
   - Refusal Set (정책 거절)
   - PII Exposure Set (개인정보 노출)
-- [ ] eval-api 서비스 구현:
+- [x] eval-api 서비스 구현(베이직):
   - 입력: question, gold_answer?, policy_rule?
-  - 출력: score_accuracy, score_relevance, score_readability, refusal?, pii_detected?
+  - 출력: placeholder metrics 파일 기록(`reports/metrics_*.json`)
 - [ ] 저지 모델 서빙:
   - 내부: Gemma3 7B/9B (판사용)
   - 외부 API: OpenAI/Anthropic 모델 (fallback)
-- [ ] 리포트 산출: metrics_{date}.json|csv
+- [x] 리포트 산출: metrics_{date}.json (MVP)
   - 평균/분포, 실패 Top-N, 판사 불일치 목록
 - [ ] 정기 실행(주간), 대시보드 업데이트
 
@@ -110,4 +110,3 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
 - [ ] docker-compose: mem_limit (서비스별 512m~2g)
 - [ ] Postgres/Redis/Qdrant/SQLite/MinIO 세팅
 - [ ] 로그/메트릭 기본 구조화
-

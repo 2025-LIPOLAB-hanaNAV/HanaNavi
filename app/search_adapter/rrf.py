@@ -23,4 +23,3 @@ def rrf(
         scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (kRR + rank)
 
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
-

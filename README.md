@@ -43,7 +43,7 @@ app/
   ├── parser/         # pdf/xlsx/docx 파서
   ├── indexer/        # 색인 모듈
   ├── rag-api/        # 검색+합성 API (OpenAI-Compat)
-  ├── search-adapter/ # IR+Vector RRF
+  ├── search_adapter/ # IR+Vector RRF
   ├── eval-api/       # LLM Judge 평가 서비스
   ├── models/         # LLM/임베딩 초기화
   └── utils/          # 공용 유틸리티
@@ -94,6 +94,16 @@ curl -X POST http://localhost:8002/webhook \
   -H 'Content-Type: application/json' \
   -d '{"action":"post_created","post_id":123,"url":"https://example"}'
 ```
+
+6) 검색/질의 API:
+
+- 하이브리드 검색: `POST http://localhost:8001/search/hybrid` body `{ "query": "...", "top_k": 20 }`
+- RAG 질의: `POST http://localhost:8001/rag/query` body `{ "query": "...", "top_k": 8 }`
+
+임베딩 가속(옵션):
+
+- Sentence-Transformers 기반 임베딩 사용 시 `.env`에 `USE_ST=1` 설정
+- 모델: `EMBEDDING_MODEL=dragonkue/snowflake-arctic-embed-l-v2.0-ko` (기본)
 
 ---
 

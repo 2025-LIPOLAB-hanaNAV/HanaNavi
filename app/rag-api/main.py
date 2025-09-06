@@ -1,7 +1,10 @@
-from typing import List
+from typing import List, Dict, Any
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+from app.search_adapter.hybrid import hybrid_search as do_hybrid
+from app.models.llm_client import LLMClient
 
 
 class SearchRequest(BaseModel):
@@ -30,14 +33,63 @@ def health() -> dict:
 
 @app.post("/search/hybrid", response_model=SearchResponse)
 def hybrid_search(req: SearchRequest) -> SearchResponse:
-    # TODO: BM25 top-50 + Vec top-50 → RRF → rerank
-    dummy = [
+    rows = do_hybrid(req.query, top_k=req.top_k)
+    results = [
         SearchResult(
-            id="doc:example",
-            score=1.0,
-            snippet="This is a stub result. Replace with real search.",
-            source="example.pdf:1",
+            id=r["id"],
+            score=r["score"],
+            snippet=r.get("snippet", ""),
+            source=r.get("source", ""),
         )
+        for r in rows
     ]
-    return SearchResponse(results=dummy)
+    return SearchResponse(results=results)
 
+
+class RagRequest(BaseModel):
+    query: str
+    top_k: int = 8
+    mode: str = "auto"  # auto|table|normal
+
+
+class RagResponse(BaseModel):
+    answer: str
+    citations: List[Dict[str, Any]]
+
+
+def _detect_table_mode(q: str) -> bool:
+    ql = q.lower()
+    keywords = ["excel", "xlsx", "표", "시트", "셀", "range", "sheet"]
+    return any(k in ql for k in keywords)
+
+
+@app.post("/rag/query", response_model=RagResponse)
+def rag_query(req: RagRequest) -> RagResponse:
+    mode = req.mode
+    if mode == "auto":
+        mode = "table" if _detect_table_mode(req.query) else "normal"
+
+    hits = do_hybrid(req.query, top_k=max(10, req.top_k))
+    ctx = "\n\n".join([f"[{i+1}] {h['snippet']}" for i, h in enumerate(hits[: req.top_k])])
+    cits = [
+        {"id": h["id"], "title": h.get("title"), "source": h.get("source")}
+        for h in hits[: req.top_k]
+    ]
+
+    # Compose prompt (LLM stubbed for now)
+    client = LLMClient()
+    prompt = (
+        "질의에 답하세요. 각 주장 뒤에 반드시 [n] 인용 번호를 붙이세요.\n"
+        "인용은 아래 컨텍스트에서만 선택하세요.\n\n"
+        f"질의: {req.query}\n\n컨텍스트:\n{ctx}\n\n"
+        "출력: 답변 본문과 마지막 줄에 'Citations: [1],[2],...' 형태로 요약 인용 목록."
+    )
+    _ = prompt  # unused when client is stub
+    answer = client.chat([{ "role": "user", "content": prompt }])
+    if not answer or answer.startswith("Not implemented"):
+        # Fallback answer for stub
+        answer = "(stub) 컨텍스트 기반 초안 답변. Citations: " + ", ".join(
+            [f"[{i+1}]" for i in range(min(len(cits), req.top_k))]
+        )
+
+    return RagResponse(answer=answer, citations=cits)

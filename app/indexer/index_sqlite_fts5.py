@@ -8,7 +8,10 @@ def _ensure_dir(path: str) -> None:
 
 
 def ensure_fts5(db_path: str) -> None:
-    """Ensure an FTS5 table for posts exists (MVP schema)."""
+    """Ensure an FTS5 table for posts exists (MVP schema).
+
+    Columns: title, body, tags, category, filetype, posted_at, severity
+    """
     _ensure_dir(db_path)
     conn = sqlite3.connect(db_path)
     try:
@@ -16,7 +19,7 @@ def ensure_fts5(db_path: str) -> None:
         cur.execute(
             """
             CREATE VIRTUAL TABLE IF NOT EXISTS posts USING fts5(
-                title, body, tags, category, filetype, date
+                title, body, tags, category, filetype, posted_at, severity
             );
             """
         )
@@ -33,7 +36,8 @@ def index_post(
     tags: str = "",
     category: str = "",
     filetype: str = "",
-    date: Optional[str] = None,
+    posted_at: Optional[str] = None,
+    severity: Optional[str] = None,
 ) -> None:
     """Insert a post row into FTS5 index."""
     ensure_fts5(db_path)
@@ -41,8 +45,8 @@ def index_post(
     try:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO posts(title, body, tags, category, filetype, date) VALUES(?,?,?,?,?,?)",
-            (title, body, tags, category, filetype, date or ""),
+            "INSERT INTO posts(title, body, tags, category, filetype, posted_at, severity) VALUES(?,?,?,?,?,?,?)",
+            (title, body, tags, category, filetype, posted_at or "", severity or ""),
         )
         conn.commit()
     finally:

@@ -87,7 +87,7 @@ app/
   ├─ parser/         # pdf/xlsx/docx 파서
   ├─ indexer/        # 색인 모듈
   ├─ rag-api/        # 검색+합성 API (OpenAI-Compat)
-  ├─ search-adapter/ # IR+Vector RRF
+  ├─ search_adapter/ # IR+Vector RRF
   ├─ eval-api/       # LLM Judge 평가 서비스
   ├─ models/         # LLM/임베딩 초기화
   └─ utils/          # 공용 유틸리티
@@ -107,3 +107,8 @@ reports/
   └─ metrics_*.json|csv
 ```
 
+---
+## 문서 업데이트 규칙
+
+- WBS.md와 AGENTS.md를 참고하여 기능구현할 것
+- 기능구현 후 WBS.md에 기록하여 진척률 확인 및 README.md에 영향을 주는 기능구현이라면 내용반영할 것

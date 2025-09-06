@@ -55,12 +55,20 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     attachments = event.get("attachments") or []
     post_dir = os.path.join(storage, "posts", post_id)
     local_paths: List[str] = []
+    attachment_infos: List[Dict[str, Any]] = []
     for att in attachments:
         url = att.get("url")
         filename = att.get("filename") or f"file_{int(time.time())}"
         path = maybe_download(post_dir, filename, url)
         if path:
+            # Hash verification
+            with open(path, "rb") as f:
+                digest = _sha1(f.read())
+            expected = att.get("sha1") or att.get("checksum")
+            if expected and expected != digest:
+                raise ValueError(f"checksum mismatch for {filename}")
             local_paths.append(path)
+            attachment_infos.append({"filename": filename, "sha1": digest})
 
     # 2) Parse attachments
     parsed_texts: List[str] = []
@@ -91,6 +99,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
                 "title": title,
                 "category": category,
                 "tags": tags,
+                "source": f"{title}#chunk:{i}",
             }
         )
     upsert_embeddings("post_chunks", points, dim=1024)
@@ -103,7 +112,8 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         tags=tags,
         category=category,
         filetype=filetype,
-        date=date,
+        posted_at=date,
+        severity=str(event.get("severity", "")),
     )
 
     return {
@@ -112,5 +122,5 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         "attachments": len(local_paths),
         "chunks": len(chunks),
         "indexed": True,
+        "attachments_meta": attachment_infos,
     }
-

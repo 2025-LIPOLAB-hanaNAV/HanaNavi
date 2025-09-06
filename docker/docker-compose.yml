@@ -77,8 +77,12 @@ services:
     build:
       context: ..
       dockerfile: app/eval-api/Dockerfile
+    environment:
+      - REPORTS_DIR=/data/reports
     ports:
       - "8003:8000"
+    volumes:
+      - appdata:/data
 
   worker:
     build:
