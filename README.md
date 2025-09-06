@@ -137,12 +137,15 @@ curl -X POST http://localhost:8002/webhook \
 ---
 
 ## 🛠️ 개발 진행 상황
-- [x] AGENTS.md / WBS.md 작성
-- [ ] ETL 파이프라인 초기 구현
-- [ ] Hybrid Search Adapter
-- [ ] RAG API + LLM 연결
-- [ ] React UI (Board/Chatbot)
-- [ ] 평가 루프 구축
+- [x] AGENTS.md / WBS.md 정리 및 유지
+- [x] ETL: 웹훅 → 다운로드 → 파싱(PDF/XLSX/DOCX) → 청킹 → 임베딩 → Qdrant 업서트 → SQLite 색인
+- [x] 검색: Hybrid(BM25+Vector → RRF) + bge-reranker-small 재랭크 + 최신성 부스트
+- [x] RAG API: `/search/hybrid`, `/rag/query`, 스트리밍 `/rag/stream` + 정책(PII/내부정보) 엔포스먼트 + 피드백 로깅
+- [x] 임베딩: ST 옵션(snowflake v2 ko), query/passages 템플릿 분리, Redis 캐시
+- [x] 모델: Ollama Gemma3 12B(양자화 태그 지원), 동시성 세마포어, 타임아웃
+- [x] UI: 게시판 업로드(Board) + 챗봇(Chatbot) 탭/필터/첨부 미리보기(PDF page, XLSX range)
+- [x] 평가: 데이터셋(master/refusal/pii), 저지 모델(Qwen2 32B) 통합, 리포트 산출
+- [ ] 운영: 정기 실행(주간) 배치 및 대시보드
 
 개발 진행에 따라 README를 지속 업데이트합니다.
 게시판 UI 실행:
