@@ -33,7 +33,7 @@ const BoardView: React.FC = () => {
     <div className="bg-white border rounded">
       <div className="px-4 py-3 border-b">
         <div className="text-xl font-semibold">{post.title}</div>
-        <div className="text-sm text-gray-500">카테고리: {post.category || '-'} · 날짜: {post.date || post.createdAt.slice(0,10)} · 중요도: {post.severity || '-'}</div>
+        <div className="text-sm text-gray-500">카테고리: {post.category || '-'} · 날짜: {post.date || '-'} · 중요도: {post.severity || '-'}</div>
         <div className="mt-1 text-sm text-gray-600">{post.tags.map(t => <span key={t} className="inline-block bg-gray-100 px-2 py-0.5 rounded mr-1">#{t}</span>)}</div>
       </div>
       <div className="p-4 whitespace-pre-wrap leading-7">{post.body}</div>

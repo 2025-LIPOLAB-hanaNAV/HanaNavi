@@ -52,6 +52,11 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     action = str(event.get("action", "")).lower()
     if action == "post_deleted":
         return run_delete(event)
+    if action == "post_updated":
+        try:
+            run_delete(event)
+        except Exception:
+            pass
 
     settings = get_settings()
     storage = settings.get("STORAGE_DIR", "/data/storage")

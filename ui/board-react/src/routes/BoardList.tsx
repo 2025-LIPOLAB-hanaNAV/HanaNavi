@@ -59,7 +59,7 @@ const BoardList: React.FC = () => {
                 <td className="p-2 text-center">{p.category || '-'}</td>
                 <td className="p-2 text-center">{p.tags.slice(0,3).map(t => <span key={t} className="inline-block bg-gray-100 px-2 py-1 rounded mr-1">#{t}</span>)}</td>
                 <td className="p-2 text-center">{p.attachments.length}</td>
-                <td className="p-2 text-center">{p.date || p.createdAt.slice(0,10)}</td>
+                <td className="p-2 text-center">{p.date || '-'}</td>
               </tr>
             ))}
             {items.length === 0 && (
