@@ -72,7 +72,7 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
         cur.execute(
             """
             SELECT p.rowid AS id, m.post_id AS post_id, p.title, p.body, p.tags, p.category, p.filetype, p.posted_at,
-                   bm25(p) AS score
+                   bm25(posts) AS score
             FROM posts p
             LEFT JOIN fts_row_map m ON m.rowid = p.rowid
             WHERE p MATCH ?
