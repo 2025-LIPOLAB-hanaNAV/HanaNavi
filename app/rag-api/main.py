@@ -71,6 +71,21 @@ _max_sessions = int(_os.getenv("LLM_MAX_SESSIONS", "4"))
 _llm_sem_async = asyncio.Semaphore(_max_sessions)
 _llm_sem_thread = threading.BoundedSemaphore(_max_sessions)
 
+# Ensure Qdrant collection exists at startup to avoid noisy 404s
+try:
+    from app.indexer.index_qdrant import ensure_collection as _ensure_qdrant_collection  # type: ignore
+except Exception:  # pragma: no cover
+    _ensure_qdrant_collection = None  # type: ignore
+
+
+@app.on_event("startup")
+async def _ensure_vec_collection():  # pragma: no cover
+    try:
+        if _ensure_qdrant_collection is not None:
+            _ensure_qdrant_collection("post_chunks", dim=1024)
+    except Exception:
+        pass
+
 
 @app.get("/health")
 def health() -> dict:

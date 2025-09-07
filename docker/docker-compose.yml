@@ -54,6 +54,8 @@ services:
       EMBED_USE_TEMPLATE: "1"
       EMBED_QUERY_PREFIX: "query: "
       EMBED_PASSAGE_PREFIX: "passage: "
+      HF_HOME: /data/hf
+      TRANSFORMERS_CACHE: /data/hf
     ports:
       - "8001:8000"
     volumes:
@@ -94,6 +96,7 @@ services:
       - "8003:8000"
     volumes:
       - appdata:/data
+      - ../datasets:/app/datasets:ro
     mem_limit: 512m
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -110,6 +113,8 @@ services:
       - SQLITE_PATH=/data/sqlite/ir.db
       - IR_BACKEND=${IR_BACKEND:-sqlite}
       - OPENSEARCH_URL=${OPENSEARCH_URL:-http://opensearch:9200}
+      - HF_HOME=/data/hf
+      - TRANSFORMERS_CACHE=/data/hf
     command: ["celery", "-A", "app.worker.celery_app:app", "worker", "--loglevel=info"]
     # Celery worker listening on Redis broker
     volumes:

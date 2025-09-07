@@ -4,10 +4,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
+ARG OFFLINE=0
+
 WORKDIR /app
 
 COPY requirements/eval-api.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY vendor/wheels/common /wheels/common
+COPY vendor/wheels/eval-api /wheels/svc
+RUN if [ "$OFFLINE" = "1" ]; then \
+      pip install --no-cache-dir --no-index \
+        --find-links=/wheels/common --find-links=/wheels/svc \
+        -r /tmp/requirements.txt; \
+    else \
+      pip install --no-cache-dir \
+        --find-links=/wheels/common --find-links=/wheels/svc \
+        -r /tmp/requirements.txt; \
+    fi
 
 COPY app /app/app
 

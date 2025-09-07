@@ -25,6 +25,9 @@ rebuild:
 build-apis:
 	$(COMPOSE) build rag-api etl-api eval-api worker
 
+build-apis-offline:
+	$(COMPOSE) build --build-arg OFFLINE=1 rag-api etl-api eval-api worker
+
 build-ui:
 	$(COMPOSE) build board chatbot
 
@@ -49,3 +52,18 @@ shell-ollama:
 
 config:
 	$(COMPOSE) config
+
+.PHONY: wheels-worker wheels-rag wheels-etl wheels-eval wheels-all
+wheels-worker:
+	docker run --rm -v $$PWD:/work -w /work python:3.11-slim bash -lc "pip install -U pip wheel && pip download -r requirements/worker.txt -d vendor/wheels/worker --only-binary=:all: || true"
+wheels-rag:
+	docker run --rm -v $$PWD:/work -w /work python:3.11-slim bash -lc "pip install -U pip wheel && pip download -r requirements/rag-api.txt -d vendor/wheels/rag-api --only-binary=:all: || true"
+wheels-etl:
+	docker run --rm -v $$PWD:/work -w /work python:3.11-slim bash -lc "pip install -U pip wheel && pip download -r requirements/etl-api.txt -d vendor/wheels/etl-api --only-binary=:all: || true"
+wheels-eval:
+	docker run --rm -v $$PWD:/work -w /work python:3.11-slim bash -lc "pip install -U pip wheel && pip download -r requirements/eval-api.txt -d vendor/wheels/eval-api --only-binary=:all: || true"
+wheels-all: wheels-worker wheels-rag wheels-etl wheels-eval
+
+.PHONY: seed-sample
+seed-sample:
+	bash scripts/seed_sample.sh
