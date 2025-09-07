@@ -1,6 +1,7 @@
 import os
 import time
 import hashlib
+import uuid
 from typing import Dict, Any, List
 
 from app.utils.config import get_settings
@@ -97,47 +98,41 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     for p in local_paths:
         parsed_texts.extend(_parse_attachment(p))
 
-    # include body as a text source
-    if body:
-        parsed_texts.insert(0, body)
+    # 3) Qdrant: 첨부파일만 벡터 인덱싱 (게시글 본문 제외)
+    if parsed_texts:  # 첨부파일이 있는 경우만
+        chunks = chunk_texts(parsed_texts, chunk_size=400, overlap=50)
+        vectors = embed_passages(chunks, dim=1024)
 
-    # 3) Chunk
-    chunks = chunk_texts(parsed_texts, chunk_size=400, overlap=50)
+        try:
+            ensure_collection("post_chunks", dim=1024)
+        except Exception:
+            pass
+        points = []
+        for i, (text, vec) in enumerate(zip(chunks, vectors)):
+            pid = str(uuid.uuid4())
+            points.append(
+                {
+                    "id": pid,
+                    "vector": vec,
+                    "post_id": post_id,
+                    "chunk_id": i,
+                    "text": text,
+                    "title": title,
+                    "category": category,
+                    "tags": tags,
+                    "source": f"{title}#attachment:{i}",  # 첨부파일임을 명시
+                    "filetype": filetype,
+                    "posted_at": date,
+                }
+            )
+        upsert_embeddings("post_chunks", points, dim=1024)
 
-    # 4) Embed
-    vectors = embed_passages(chunks, dim=1024)
-
-    # 5) Upsert to Qdrant (ensure collection exists even if points are 0)
-    try:
-        ensure_collection("post_chunks", dim=1024)
-    except Exception:
-        pass
-    points = []
-    for i, (text, vec) in enumerate(zip(chunks, vectors)):
-        pid = f"{post_id}_{i}"
-        points.append(
-            {
-                "id": pid,
-                "vector": vec,
-                "post_id": post_id,
-                "chunk_id": i,
-                "text": text,
-                "title": title,
-                "category": category,
-                "tags": tags,
-                "source": f"{title}#chunk:{i}",
-                "filetype": filetype,
-                "posted_at": date,
-            }
-        )
-    upsert_embeddings("post_chunks", points, dim=1024)
-
-    # 6) Index IR (title/body/tags...)
+    # 4) OpenSearch/SQLite FTS: 게시글 본문만 인덱싱 (첨부파일 제외)
     index_post(
         sqlite_path,
         post_id=post_id,
         title=title,
-        body="\n".join(parsed_texts),
+        body=body,  # 게시글 본문만 인덱싱
         tags=tags,
         category=category,
         filetype=filetype,
@@ -150,7 +145,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
             os_upsert_post(
                 post_id=post_id,
                 title=title,
-                body="\n".join(parsed_texts),
+                body=body,  # 게시글 본문만 인덱싱
                 tags=tags,
                 category=category,
                 filetype=filetype,

@@ -74,7 +74,8 @@ const BoardNew: React.FC = () => {
       const created = await res.json()
       nav(`/post/${created.id}`)
     } catch (e: any) {
-      setError(e?.message || String(e))
+      console.error(e)
+      setError(String(e))
     } finally {
       setPosting(false)
     }

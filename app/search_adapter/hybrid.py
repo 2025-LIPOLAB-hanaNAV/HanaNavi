@@ -41,56 +41,65 @@ def _pass_filters(payload: Dict[str, Any], filters: Dict[str, Any]) -> bool:
     return True
 
 
-def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-    bm25 = bm25_search(query, top_k=50)
-    vec = vector_search(query, top_k=50)
+def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]] = None, model: Optional[str] = None) -> List[Dict[str, Any]]:
+    # 분리된 검색 전략: OpenSearch(게시글) + Qdrant(첨부파일)
+    bm25 = bm25_search(query, top_k=30, model=model)  # 게시글 본문 검색 (LLM 향상 적용)
+    vec = vector_search(query, top_k=30)  # 첨부파일 검색
 
-    # Prepare lists for RRF (doc_id, score)
-    bm25_pairs = [(doc_id, score) for doc_id, score, _ in bm25]
-    vec_pairs = [(doc_id, score) for doc_id, score, _ in vec]
-    fused = rrf(bm25_pairs, vec_pairs, kRR=60)
+    # 게시글 검색 결과 처리 (OpenSearch/SQLite)
+    board_results = []
+    for doc_id, score, payload in bm25:
+        date_str = str(payload.get("date", ""))
+        score += _recency_boost(date_str) + 0.1  # 게시글에 약간 더 높은 가중치
+        text = payload.get("snippet", "")
+        if not filters or _pass_filters(payload, filters):
+            board_results.append((doc_id, score, text, payload, "board"))
 
-    # Merge payloads by preferring vector payload first (has chunk text)
-    payload_map: Dict[str, Dict[str, Any]] = {}
-    for doc_id, _s, payload in bm25:
-        payload_map.setdefault(doc_id, payload)
-    for doc_id, _s, payload in vec:
-        payload_map[doc_id] = {**payload_map.get(doc_id, {}), **payload}
-
-    # Apply filters and small recency boost
-    rescored = []
-    for doc_id, score in fused:
-        date_str = str(payload_map.get(doc_id, {}).get("date", ""))
+    # 첨부파일 검색 결과 처리 (Qdrant)
+    attachment_results = []
+    for doc_id, score, payload in vec:
+        date_str = str(payload.get("date", payload.get("posted_at", "")))
         score += _recency_boost(date_str)
-        # Include text for reranker
-        text = payload_map.get(doc_id, {}).get("text") or payload_map.get(doc_id, {}).get(
-            "snippet", ""
-        )
-        if not filters or _pass_filters(payload_map.get(doc_id, {}), filters):
-            rescored.append((doc_id, score, text))
+        text = payload.get("text", "")
+        if not filters or _pass_filters(payload, filters):
+            attachment_results.append((doc_id, score, text, payload, "attachment"))
 
-    reranked = rerank(query, rescored[: max(20, top_k)], top_k=top_k)
+    # 전체 결과 병합 및 재랭킹
+    all_candidates = board_results + attachment_results
+    all_candidates.sort(key=lambda x: x[1], reverse=True)
+    
+    # 상위 후보들에 대해 재랭킹 적용
+    rerank_input = [(doc_id, score, text) for doc_id, score, text, _, _ in all_candidates[:max(40, top_k*2)]]
+    reranked = rerank(query, rerank_input, top_k=top_k)
+    
+    # 원본 payload 정보 복원 및 결과 구성
+    id_to_payload = {doc_id: (payload, source_type) for doc_id, _, _, payload, source_type in all_candidates}
+    
     results: List[Dict[str, Any]] = []
     for doc_id, score in reranked:
-        payload = payload_map.get(doc_id, {})
-        title = payload.get("title") or payload.get("post_id") or doc_id
-        text = payload.get("text") or payload.get("snippet") or ""
-        source = payload.get("source") or f"{title}#chunk:{payload.get('chunk_id','?')}"
-        # Derive post_id from doc_id if not present (e.g., FTS row: post:<rowid>)
-        pid = payload.get("post_id")
-        if not pid and doc_id.startswith("post:"):
-            pid = doc_id.split(":", 1)[1]
-        results.append(
-            {
-                "id": doc_id,
-                "score": float(score),
-                "snippet": text[:300],
-                "source": source,
-                "title": title,
-                "post_id": pid,
-                "filetype": payload.get("filetype"),
-                "posted_at": payload.get("date") or payload.get("posted_at"),
-                "category": payload.get("category"),
-            }
-        )
+        payload, source_type = id_to_payload.get(doc_id, ({}, "unknown"))
+        
+        if source_type == "board":
+            title = payload.get("title", "")
+            text = payload.get("snippet", "")
+            source = f"{title} (게시글)"
+            pid = payload.get("post_id") or (doc_id.split(":", 1)[1] if doc_id.startswith("post:") else None)
+        else:  # attachment
+            title = payload.get("title", "")
+            text = payload.get("text", "")
+            source = payload.get("source", f"{title}#chunk:{payload.get('chunk_id','?')}")
+            pid = payload.get("post_id")
+        
+        results.append({
+            "id": doc_id,
+            "score": float(score),
+            "snippet": text[:300],
+            "source": source,
+            "title": title,
+            "post_id": pid,
+            "filetype": payload.get("filetype"),
+            "posted_at": payload.get("date") or payload.get("posted_at"),
+            "category": payload.get("category"),
+            "source_type": source_type,  # 구분용 추가 필드
+        })
     return results

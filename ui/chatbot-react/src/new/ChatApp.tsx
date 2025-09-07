@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-type Citation = { id: string; title?: string; source?: string; post_id?: string | null }
+type Citation = { id: string; title?: string; source?: string; post_id?: string | null; snippet?: string; highlighted_snippet?: string }
 type Policy = { refusal: boolean; masked: boolean; pii_types: string[]; reason: string }
 
 type Message = { role: 'user' | 'assistant'; content: string; citations?: Citation[]; policy?: Policy }
@@ -198,15 +198,30 @@ const ChatApp: React.FC = () => {
             {messages.filter(m=>m.role==='assistant').map((m, i) => (
               <div key={i} className="bg-white border rounded p-2">
                 <div className="text-xs text-gray-500 mb-1">답변 {i+1}</div>
-                <ul className="space-y-1 text-sm">
+                <ul className="space-y-3 text-sm">
                   {(m.citations||[]).map((c, j) => (
-                    <li key={j} className="flex justify-between gap-2">
-                      <span className="truncate">[{j+1}] {c.title || c.id}</span>
-                      {c.post_id && (
-                        <>
-                          <a className="text-blue-600" href={`${BOARD_BASE}/post/${c.post_id}`} target="_blank" rel="noreferrer">게시글</a>
-                          <a className="text-blue-600 ml-2" href={`${ETL_BASE}/posts/${c.post_id}/attachments`} target="_blank" rel="noreferrer">첨부</a>
-                        </>
+                    <li key={j} className="border-b border-gray-100 pb-2">
+                      <div className="flex justify-between gap-2 mb-1">
+                        <span className="truncate font-medium">[{j+1}] {c.title || c.id}</span>
+                        {c.post_id && (
+                          <div className="flex gap-1">
+                            <a className="text-blue-600 text-xs" href={`${BOARD_BASE}/post/${c.post_id}`} target="_blank" rel="noreferrer">게시글</a>
+                            <a className="text-blue-600 text-xs" href={`${ETL_BASE}/posts/${c.post_id}/attachments`} target="_blank" rel="noreferrer">첨부</a>
+                          </div>
+                        )}
+                      </div>
+                      {c.highlighted_snippet && (
+                        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                            p: ({children}) => <span>{children}</span>,
+                            strong: ({children}) => <mark className="bg-yellow-200 px-1 rounded">{children}</mark>
+                          }}>
+                            {c.highlighted_snippet}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {c.source && (
+                        <div className="text-xs text-gray-400 mt-1 truncate">{c.source}</div>
                       )}
                     </li>
                   ))}
