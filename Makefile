@@ -8,7 +8,7 @@ up:
 	$(COMPOSE) up -d
 
 down:
-	$(COMPOSE) down -v
+	$(COMPOSE) down
 
 ps:
 	$(COMPOSE) ps
