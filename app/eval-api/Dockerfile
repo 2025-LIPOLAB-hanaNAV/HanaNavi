@@ -9,16 +9,13 @@ ARG OFFLINE=0
 WORKDIR /app
 
 COPY requirements/eval-api.txt /tmp/requirements.txt
-RUN mkdir -p /wheels
+RUN mkdir -p /wheels /wheels/common /wheels/eval-api
 COPY vendor/wheels /wheels
-RUN if [ "$OFFLINE" = "1" ]; then \
-      pip install --no-cache-dir --no-index \
-        --find-links=/wheels/common --find-links=/wheels/svc \
-        -r /tmp/requirements.txt; \
+RUN FL="--find-links=/wheels --find-links=/wheels/common --find-links=/wheels/eval-api"; \
+    if [ "$OFFLINE" = "1" ] && ls -1 /wheels 2>/dev/null | grep -E '\.whl$' -q; then \
+      pip install --no-cache-dir --no-index $FL -r /tmp/requirements.txt; \
     else \
-      pip install --no-cache-dir \
-        --find-links=/wheels/common --find-links=/wheels/svc \
-        -r /tmp/requirements.txt; \
+      pip install --no-cache-dir $FL -r /tmp/requirements.txt; \
     fi
 
 COPY app /app/app

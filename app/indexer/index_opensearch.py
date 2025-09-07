@@ -21,23 +21,51 @@ def ensure_index(index: str = "posts") -> None:
             return
     except Exception:
         pass
+    use_syn = os.getenv("OPENSEARCH_USE_SYNONYMS", "1") == "1"
+    syn_set = os.getenv("OPENSEARCH_SYNONYMS_SET", "ko_syn")
+    analyzer_name = "ko_analyzer"
+    analysis = {
+        "analyzer": {
+            "ko_analyzer": {
+                "type": "custom",
+                "tokenizer": "nori_tokenizer",
+                "filter": ["lowercase", "nori_part_of_speech"],
+            }
+        }
+    }
+    if use_syn:
+        analyzer_name = "ko_syn_analyzer"
+        analysis = {
+            "analyzer": {
+                "ko_syn_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "nori_tokenizer",
+                    "filter": [
+                        "lowercase",
+                        "nori_part_of_speech",
+                        "ko_syn_filter",
+                    ],
+                }
+            },
+            "filter": {
+                "ko_syn_filter": {
+                    "type": "synonym_graph",
+                    "synonyms_set": syn_set,
+                    "updateable": True,
+                    "lenient": True,
+                }
+            },
+        }
+
     body = {
         "settings": {
             "index": {"number_of_shards": 1, "number_of_replicas": 0},
-            "analysis": {
-                "analyzer": {
-                    "ko_analyzer": {
-                        "type": "custom",
-                        "tokenizer": "nori_tokenizer",
-                        "filter": ["lowercase", "nori_part_of_speech"],
-                    }
-                }
-            },
+            "analysis": analysis,
         },
         "mappings": {
             "properties": {
-                "title": {"type": "text", "analyzer": "ko_analyzer", "search_analyzer": "ko_analyzer"},
-                "body": {"type": "text", "analyzer": "ko_analyzer", "search_analyzer": "ko_analyzer"},
+                "title": {"type": "text", "analyzer": analyzer_name, "search_analyzer": analyzer_name},
+                "body": {"type": "text", "analyzer": analyzer_name, "search_analyzer": analyzer_name},
                 "tags": {"type": "keyword"},
                 "category": {"type": "keyword"},
                 "filetype": {"type": "keyword"},
@@ -49,7 +77,24 @@ def ensure_index(index: str = "posts") -> None:
     try:
         cli.indices.create(index=index, body=body)  # type: ignore
     except Exception:
-        pass
+        # Fallback without synonyms if creation failed (e.g., synonyms set missing)
+        body["settings"]["analysis"] = {
+            "analyzer": {
+                "ko_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "nori_tokenizer",
+                    "filter": ["lowercase", "nori_part_of_speech"],
+                }
+            }
+        }
+        body["mappings"]["properties"]["title"]["analyzer"] = "ko_analyzer"
+        body["mappings"]["properties"]["title"]["search_analyzer"] = "ko_analyzer"
+        body["mappings"]["properties"]["body"]["analyzer"] = "ko_analyzer"
+        body["mappings"]["properties"]["body"]["search_analyzer"] = "ko_analyzer"
+        try:
+            cli.indices.create(index=index, body=body)  # type: ignore
+        except Exception:
+            pass
 
 
 def upsert_post(post_id: str, title: str, body: str, tags: str, category: str, filetype: str, posted_at: str, severity: str, index: str = "posts") -> None:

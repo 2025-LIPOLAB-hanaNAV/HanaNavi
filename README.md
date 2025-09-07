@@ -195,11 +195,14 @@ OpenSearch IR 백엔드
   3) (옵션) 대시보드: `--profile opensearch up -d opensearch-dashboards` (http://localhost:5601)
   4) 서비스 재시작: `make restart service=worker` && `make restart service=rag-api`
   5) (선택) 기존 문서 재색인: `make reindex-opensearch`
- - 인덱싱: worker가 ingest 시 `posts` 인덱스에 문서를 업서트합니다.
- - 검색: rag-api가 BM25(IR)를 OpenSearch로, 벡터는 Qdrant로 질의 후 RRF 융합 → 재랭크
+- 인덱싱: worker가 ingest 시 `posts` 인덱스에 문서를 업서트합니다.
+- 검색: rag-api가 BM25(IR)를 OpenSearch로, 벡터는 Qdrant로 질의 후 RRF 융합 → 재랭크
 - 한국어 형태소 분석기(Nori): 기본 이미지는 포함하지 않습니다. 필요 시 OpenSearch 이미지를 커스터마이즈하여 `analysis-nori` 플러그인을 설치한 후 인덱스 매핑에 적용하세요(추후 프로파일 제공 가능).
   - 본 리포지토리는 `docker/opensearch/Dockerfile`로 Nori 플러그인을 포함한 이미지를 제공합니다.
   - 인덱스 매핑은 한글 분석기(ko_analyzer)가 title/body에 적용되도록 자동 생성됩니다(최초 생성 시).
+ - 보안 플러그인 비밀번호(필수): 2.12+부터 OpenSearch는 최초 실행 시 `OPENSEARCH_INITIAL_ADMIN_PASSWORD`가 필요합니다.
+   - `.env`에 설정(예: `OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin123!`)
+   - 클라이언트(rag-api/worker)는 `.env`의 `OPENSEARCH_USER`, `OPENSEARCH_PASSWORD`, `OPENSEARCH_URL=https://...`을 사용합니다.
 
 ## ⚡ 빠른 재빌드: 휠(whl) 사전 다운로드
 

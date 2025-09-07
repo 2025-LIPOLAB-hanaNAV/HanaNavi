@@ -75,3 +75,7 @@ seed-sample-pdf:
 .PHONY: reindex-opensearch
 reindex-opensearch:
 	$(COMPOSE) exec worker python -m app.tools.reindex_opensearch || true
+
+.PHONY: opensearch-setup
+opensearch-setup:
+	$(COMPOSE) exec worker python -m app.tools.setup_opensearch || true
