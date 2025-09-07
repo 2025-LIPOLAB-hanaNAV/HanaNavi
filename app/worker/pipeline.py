@@ -15,12 +15,15 @@ from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attac
 import os as _os
 _IR_BACKEND = _os.getenv("IR_BACKEND", "sqlite").lower()
 _USE_OPENSEARCH = _IR_BACKEND == "opensearch" or _os.getenv("IR_DUAL", "0") == "1"
-    if _USE_OPENSEARCH:
-        try:
-        from app.indexer.index_opensearch import upsert_post as os_upsert_post, delete_post as os_delete_post  # type: ignore
+os_upsert_post = None
+os_delete_post = None
+if _USE_OPENSEARCH:
+    try:
+        from app.indexer.index_opensearch import upsert_post as os_upsert_post, delete_post as os_delete_post
     except Exception:  # pragma: no cover
-        os_upsert_post = None  # type: ignore
-        os_delete_post = None  # type: ignore
+        # Keep None fallbacks when OpenSearch tooling is unavailable
+        os_upsert_post = None
+        os_delete_post = None
 
 
 def _sha1(data: bytes) -> str:
@@ -139,7 +142,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         category=category,
         filetype=filetype,
         posted_at=date,
-        severity=str(event.get("severity", "")),
+        severity=str(event.get("severity", ""))
     )
     # Optional: also index into OpenSearch for scalable IR
     if _USE_OPENSEARCH and os_upsert_post is not None:

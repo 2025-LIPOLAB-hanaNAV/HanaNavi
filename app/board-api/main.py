@@ -9,9 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import httpx
 
-from .db import engine, get_session
-from .models import Base, Post, Attachment
-from .schemas import PostCreate, PostUpdate, PostOut, PostList, AttachmentOut
+from db import engine, get_session
+from models import Base, Post, Attachment
+from schemas import PostCreate, PostUpdate, PostOut, PostList, AttachmentOut
 
 
 Base.metadata.create_all(bind=engine)

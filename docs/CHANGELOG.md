@@ -2,6 +2,17 @@
 
 프로젝트의 주요 변경사항을 요약합니다. 태그 `v0.1.0` 이후의 주요 변경을 정리했습니다.
 
+## v0.2.2
+
+- 수정: `app/worker/pipeline.py`의 `IndentationError` 해결
+- 수정: `app/board-api/main.py`의 `ImportError` 해결
+
+## v0.2.1
+
+- 수정: worker 파이프라인(OpenSearch 선택적 임포트) 들여쓰기 오류 수정 → Celery 기동 오류(IndentationError) 해소
+- 문서: Chatbot UI README 갱신(스트리밍, 인용 패널, 모델 관리, 환경변수)
+- 문서: README에 Chatbot UI 안내 링크 추가(경량)
+
 ## v0.2.0
 
 - 추가: OpenSearch IR 백엔드(옵션) 지원 및 Nori 분석기 통합
