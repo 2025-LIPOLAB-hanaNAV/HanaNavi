@@ -10,7 +10,7 @@ from app.parser.xlsx_parser import parse_xlsx
 from app.parser.docx_parser import parse_docx
 from app.worker.downloader import maybe_download
 from app.worker.chunker import chunk_texts
-from app.indexer.index_qdrant import upsert_embeddings
+from app.indexer.index_qdrant import upsert_embeddings, ensure_collection
 from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attachments
 import os as _os
 _IR_BACKEND = _os.getenv("IR_BACKEND", "sqlite").lower()
@@ -93,7 +93,11 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     # 4) Embed
     vectors = embed_passages(chunks, dim=1024)
 
-    # 5) Upsert to Qdrant
+    # 5) Upsert to Qdrant (ensure collection exists even if points are 0)
+    try:
+        ensure_collection("post_chunks", dim=1024)
+    except Exception:
+        pass
     points = []
     for i, (text, vec) in enumerate(zip(chunks, vectors)):
         pid = f"{post_id}_{i}"
