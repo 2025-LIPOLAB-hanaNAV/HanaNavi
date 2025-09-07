@@ -23,12 +23,21 @@ def ensure_index(index: str = "posts") -> None:
         pass
     body = {
         "settings": {
-            "index": {"number_of_shards": 1, "number_of_replicas": 0}
+            "index": {"number_of_shards": 1, "number_of_replicas": 0},
+            "analysis": {
+                "analyzer": {
+                    "ko_analyzer": {
+                        "type": "custom",
+                        "tokenizer": "nori_tokenizer",
+                        "filter": ["lowercase", "nori_part_of_speech"],
+                    }
+                }
+            },
         },
         "mappings": {
             "properties": {
-                "title": {"type": "text"},
-                "body": {"type": "text"},
+                "title": {"type": "text", "analyzer": "ko_analyzer", "search_analyzer": "ko_analyzer"},
+                "body": {"type": "text", "analyzer": "ko_analyzer", "search_analyzer": "ko_analyzer"},
                 "tags": {"type": "keyword"},
                 "category": {"type": "keyword"},
                 "filetype": {"type": "keyword"},
@@ -59,4 +68,3 @@ def upsert_post(post_id: str, title: str, body: str, tags: str, category: str, f
         cli.index(index=index, id=f"post:{post_id}", body=doc)  # type: ignore
     except Exception:
         pass
-

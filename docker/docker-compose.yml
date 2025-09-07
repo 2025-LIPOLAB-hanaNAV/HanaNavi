@@ -154,7 +154,9 @@ services:
     mem_limit: 1g
 
   opensearch:
-    image: opensearchproject/opensearch:2
+    build:
+      context: ..
+      dockerfile: docker/opensearch/Dockerfile
     profiles: ["opensearch"]
     environment:
       - discovery.type=single-node

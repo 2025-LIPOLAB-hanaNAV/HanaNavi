@@ -189,13 +189,35 @@ OpenSearch IR 백엔드
 - 기본 IR은 SQLite FTS5이며, 대규모 데이터/고급 검색이 필요할 때 OpenSearch를 사용할 수 있습니다.
 - 활성화(업그레이드 단계):
   1) `.env`에 `IR_BACKEND=opensearch` 설정
-  2) OpenSearch 기동: `docker compose -f docker/docker-compose.yml --profile opensearch up -d opensearch`
+  2) OpenSearch(Nori 포함) 빌드/기동:
+     - 빌드: `docker compose -f docker/docker-compose.yml --profile opensearch build opensearch`
+     - 기동: `docker compose -f docker/docker-compose.yml --profile opensearch up -d opensearch`
   3) (옵션) 대시보드: `--profile opensearch up -d opensearch-dashboards` (http://localhost:5601)
   4) 서비스 재시작: `make restart service=worker` && `make restart service=rag-api`
   5) (선택) 기존 문서 재색인: `make reindex-opensearch`
  - 인덱싱: worker가 ingest 시 `posts` 인덱스에 문서를 업서트합니다.
  - 검색: rag-api가 BM25(IR)를 OpenSearch로, 벡터는 Qdrant로 질의 후 RRF 융합 → 재랭크
- - 한국어 형태소 분석기(Nori): 기본 이미지는 포함하지 않습니다. 필요 시 OpenSearch 이미지를 커스터마이즈하여 `analysis-nori` 플러그인을 설치한 후 인덱스 매핑에 적용하세요(추후 프로파일 제공 가능).
+- 한국어 형태소 분석기(Nori): 기본 이미지는 포함하지 않습니다. 필요 시 OpenSearch 이미지를 커스터마이즈하여 `analysis-nori` 플러그인을 설치한 후 인덱스 매핑에 적용하세요(추후 프로파일 제공 가능).
+  - 본 리포지토리는 `docker/opensearch/Dockerfile`로 Nori 플러그인을 포함한 이미지를 제공합니다.
+  - 인덱스 매핑은 한글 분석기(ko_analyzer)가 title/body에 적용되도록 자동 생성됩니다(최초 생성 시).
+
+## ⚡ 빠른 재빌드: 휠(whl) 사전 다운로드
+
+대형 패키지(onnxruntime, transformers 등) 다운로드 시간을 줄이기 위해, 컨테이너 빌드 전에 whl을 미리 받아 로컬 캐시를 사용할 수 있습니다.
+
+- 휠 다운로드(전 서비스):
+  - `make wheels-all`
+- 개별 서비스:
+  - `make wheels-worker`, `make wheels-rag`, `make wheels-etl`, `make wheels-eval`
+- 오프라인/캐시 설치 빌드:
+  - `make build-apis-offline`
+
+동작 원리
+- `vendor/wheels/<service>`에 미리 whl을 내려받고, Dockerfile에서 `/wheels`를 `--find-links`로 참조하여 pip 설치를 수행합니다.
+- `OFFLINE=1` 빌드 인자 사용 시 `--no-index`로 PyPI 접속 없이 로컬 wheelhouse만 사용합니다.
+
+주의
+- 일부 패키지는 바이너리 휠이 없어 sdist만 배포될 수 있습니다. 이 경우 `make wheels-*`에서 에러가 나도 무시되며, 빌드 시 PyPI에서 받거나(OFFLINE=0) 수동으로 휠을 추가해 주셔야 합니다.
 
 ---
 
