@@ -43,7 +43,12 @@ def _pass_filters(payload: Dict[str, Any], filters: Dict[str, Any]) -> bool:
 
 def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]] = None, model: Optional[str] = None) -> List[Dict[str, Any]]:
     # 분리된 검색 전략: OpenSearch(게시글) + Qdrant(첨부파일)
-    bm25 = bm25_search(query, top_k=30, model=model)  # 게시글 본문 검색 (LLM 향상 적용)
+    import os as _os
+    # OpenSearch인 경우만 model 파라미터 전달
+    if _os.getenv("IR_BACKEND", "sqlite").lower() == "opensearch":
+        bm25 = bm25_search(query, top_k=30, model=model)  # OpenSearch - LLM 향상 적용
+    else:
+        bm25 = bm25_search(query, top_k=30)  # SQLite - 기본 검색
     vec = vector_search(query, top_k=30)  # 첨부파일 검색
 
     # 게시글 검색 결과 처리 (OpenSearch/SQLite)
