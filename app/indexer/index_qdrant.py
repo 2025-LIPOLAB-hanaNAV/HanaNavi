@@ -13,6 +13,11 @@ except Exception:  # pragma: no cover
     Distance = None  # type: ignore
     VectorParams = None  # type: ignore
     PointStruct = None  # type: ignore
+    # Deletion filter models (optional)
+    try:
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue  # type: ignore
+    except Exception:
+        Filter = FieldCondition = MatchValue = None  # type: ignore
 
 
 def _client() -> Any:
@@ -48,3 +53,15 @@ def upsert_embeddings(collection: str, points: List[Dict[str, Any]], dim: int = 
         for p in points
     ]
     client.upsert(collection_name=collection, points=qpoints)
+
+
+def delete_by_post_id(collection: str, post_id: str) -> None:
+    client = _client()
+    try:
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue  # type: ignore
+        flt = Filter(must=[FieldCondition(key="post_id", match=MatchValue(value=post_id))])
+        client.delete(collection_name=collection, points_selector=flt)
+    except Exception:
+        # best-effort; if filter API unavailable, attempt id range fallback
+        # Note: our IDs are formatted as f"{post_id}_<chunk>"; we cannot enumerate without metadata
+        pass

@@ -6,6 +6,10 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+try:
+    from pydantic import ConfigDict  # pydantic v2
+except Exception:  # pragma: no cover
+    ConfigDict = None  # type: ignore
 from attachments import get_attachments
 try:
     import openpyxl
@@ -20,6 +24,9 @@ except Exception:  # pragma: no cover
 
 
 class WebhookEvent(BaseModel):
+    # Allow extra fields (title/body/tags/category/date/attachments...) to pass through
+    if ConfigDict:
+        model_config = ConfigDict(extra='allow')  # type: ignore
     action: str
     post_id: Optional[int] = None
     url: Optional[str] = None

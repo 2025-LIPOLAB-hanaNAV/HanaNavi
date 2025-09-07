@@ -104,6 +104,20 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  board-api:
+    build:
+      context: ..
+      dockerfile: app/board-api/Dockerfile
+    depends_on:
+      - postgres
+      - etl-api
+    environment:
+      - DATABASE_URL=${BOARD_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/dify}
+      - ETL_BASE_URL=http://etl-api:8000
+    ports:
+      - "8004:8000"
+    mem_limit: 512m
+
   worker:
     build:
       context: ..
@@ -179,7 +193,7 @@ services:
     mem_limit: 2g
 
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:2
+    image: opensearchproject/opensearch-dashboards:3
     profiles: ["opensearch"]
     environment:
       - OPENSEARCH_HOSTS=["https://opensearch:9200"]

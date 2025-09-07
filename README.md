@@ -48,7 +48,7 @@ app/
   ├── models/         # LLM/임베딩 초기화
   └── utils/          # 공용 유틸리티
 ui/
-  ├── board-react/    # 게시판 UI (글 작성/첨부 업로드)
+  ├── board-react/    # 게시판 UI (글 작성/수정/삭제/첨부 업로드, DB 연동)
   └── chatbot-react/  # 챗봇 UI (질문/답변/출처 + 첨부 미리보기)
 docker/
   └── docker-compose.yml
@@ -94,7 +94,7 @@ make pull-model MODEL=gemma3:12b-q5_K_M
 - rag-api: http://localhost:8001/health
 - eval-api: http://localhost:8003/health
 
-5) 웹훅 테스트(작업 큐에 태스크 등록):
+5) 게시판/웹훅 테스트(작업 큐에 태스크 등록):
 
 ```bash
 curl -X POST http://localhost:8002/webhook \
@@ -198,6 +198,23 @@ OpenSearch IR 백엔드
 - 인덱싱: worker가 ingest 시 `posts` 인덱스에 문서를 업서트합니다.
 - 검색: rag-api가 BM25(IR)를 OpenSearch로, 벡터는 Qdrant로 질의 후 RRF 융합 → 재랭크
 - 한국어 형태소 분석기(Nori): 기본 이미지는 포함하지 않습니다. 필요 시 OpenSearch 이미지를 커스터마이즈하여 `analysis-nori` 플러그인을 설치한 후 인덱스 매핑에 적용하세요(추후 프로파일 제공 가능).
+
+게시판(Board) API/DB 연동
+
+- board-api: FastAPI + SQLAlchemy(Postgres) 기반 CRUD 제공
+  - 엔드포인트:
+    - `GET /health`
+    - `GET /posts?page=&page_size=&q=` 목록
+    - `GET /posts/{id}` 상세
+    - `POST /posts` 생성(첨부 메타 포함), 생성 시 etl-api에 웹훅 전달 → 색인
+    - `PUT /posts/{id}` 수정, 수정 시 웹훅 → 재색인
+    - `DELETE /posts/{id}` 삭제, 삭제 시 웹훅 → Qdrant/SQLite/OpenSearch에서 삭제
+- UI(board-react)는 첨부는 `etl-api:/upload`로 업로드 후 반환된 메타를 `board-api:/posts`에 전달하여 저장합니다.
+- 영속성:
+  - 게시글/첨부 메타: Postgres `dify` DB 내 테이블(`board_posts`, `board_attachments`)
+  - 첨부 파일: etl-api 컨테이너의 `/data/storage/uploads` (Compose `appdata` 볼륨) → 재기동 후에도 유지
+- OpenSearch 연동:
+  - `.env`에서 `IR_BACKEND=opensearch` 또는 `IR_DUAL=1` 설정 시 worker가 OpenSearch에도 upsert/delete 수행
   - 본 리포지토리는 `docker/opensearch/Dockerfile`로 Nori 플러그인을 포함한 이미지를 제공합니다.
   - 인덱스 매핑은 한글 분석기(ko_analyzer)가 title/body에 적용되도록 자동 생성됩니다(최초 생성 시).
  - 보안 플러그인 비밀번호(필수): 2.12+부터 OpenSearch는 최초 실행 시 `OPENSEARCH_INITIAL_ADMIN_PASSWORD`가 필요합니다.

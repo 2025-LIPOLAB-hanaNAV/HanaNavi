@@ -6,6 +6,7 @@ import BoardApp from './routes/BoardApp'
 import BoardList from './routes/BoardList'
 import BoardNew from './routes/BoardNew'
 import BoardView from './routes/BoardView'
+import BoardEdit from './routes/BoardEdit'
 
 const router = createBrowserRouter([
   {
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
       { index: true, element: <BoardList /> },
       { path: 'new', element: <BoardNew /> },
       { path: 'post/:id', element: <BoardView /> },
+      { path: 'post/:id/edit', element: <BoardEdit /> },
     ],
   },
 ])

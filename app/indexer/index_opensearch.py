@@ -113,3 +113,11 @@ def upsert_post(post_id: str, title: str, body: str, tags: str, category: str, f
         cli.index(index=index, id=f"post:{post_id}", body=doc)  # type: ignore
     except Exception:
         pass
+
+
+def delete_post(post_id: str, index: str = "posts") -> None:
+    cli = _client()
+    try:
+        cli.delete(index=index, id=f"post:{post_id}")  # type: ignore
+    except Exception:
+        pass

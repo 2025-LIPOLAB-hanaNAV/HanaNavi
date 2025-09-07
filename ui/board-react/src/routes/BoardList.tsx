@@ -1,11 +1,23 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PostItem, loadPosts } from './types'
+import { BOARD_BASE, PostItem } from './types'
 
 const PAGE_SIZE = 10
 
 const BoardList: React.FC = () => {
-  const all = useMemo(loadPosts, [])
+  const [all, setAll] = useState<PostItem[]>([])
+  useEffect(() => {
+    const fetchList = async () => {
+      try {
+        const res = await fetch(`${BOARD_BASE}/posts?page=1&page_size=500`)
+        const data = await res.json()
+        setAll((data.items || []) as PostItem[])
+      } catch {
+        setAll([])
+      }
+    }
+    fetchList()
+  }, [])
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const filtered = all.filter(p =>
@@ -65,4 +77,3 @@ const BoardList: React.FC = () => {
   )}
 
 export default BoardList
-

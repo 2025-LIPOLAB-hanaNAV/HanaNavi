@@ -10,16 +10,17 @@ from app.parser.xlsx_parser import parse_xlsx
 from app.parser.docx_parser import parse_docx
 from app.worker.downloader import maybe_download
 from app.worker.chunker import chunk_texts
-from app.indexer.index_qdrant import upsert_embeddings, ensure_collection
-from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attachments
+from app.indexer.index_qdrant import upsert_embeddings, ensure_collection, delete_by_post_id
+from app.indexer.index_sqlite_fts5 import index_post, save_post_meta, save_attachments, delete_post as sqlite_delete
 import os as _os
 _IR_BACKEND = _os.getenv("IR_BACKEND", "sqlite").lower()
 _USE_OPENSEARCH = _IR_BACKEND == "opensearch" or _os.getenv("IR_DUAL", "0") == "1"
-if _USE_OPENSEARCH:
-    try:
-        from app.indexer.index_opensearch import upsert_post as os_upsert_post  # type: ignore
+    if _USE_OPENSEARCH:
+        try:
+        from app.indexer.index_opensearch import upsert_post as os_upsert_post, delete_post as os_delete_post  # type: ignore
     except Exception:  # pragma: no cover
         os_upsert_post = None  # type: ignore
+        os_delete_post = None  # type: ignore
 
 
 def _sha1(data: bytes) -> str:
@@ -47,6 +48,11 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
     - tags, category, filetype, date: optional metadata
     - attachments: [{filename, url}] (optional)
     """
+    # Allow delete action
+    action = str(event.get("action", "")).lower()
+    if action == "post_deleted":
+        return run_delete(event)
+
     settings = get_settings()
     storage = settings.get("STORAGE_DIR", "/data/storage")
     sqlite_path = settings.get("SQLITE_PATH", "/data/sqlite/ir.db")
@@ -167,3 +173,28 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         "indexed": True,
         "attachments_meta": attachment_infos,
     }
+
+
+def run_delete(event: Dict[str, Any]) -> Dict[str, Any]:
+    settings = get_settings()
+    sqlite_path = settings.get("SQLITE_PATH", "/data/sqlite/ir.db")
+    post_id = str(event.get("post_id", ""))
+    if not post_id:
+        raise ValueError("post_id required for delete")
+    # Delete from Qdrant
+    try:
+        delete_by_post_id("post_chunks", post_id)
+    except Exception:
+        pass
+    # Delete from SQLite FTS/meta
+    try:
+        sqlite_delete(sqlite_path, post_id=post_id)
+    except Exception:
+        pass
+    # Delete from OpenSearch if enabled
+    if _USE_OPENSEARCH and 'os_delete_post' in globals() and os_delete_post is not None:  # type: ignore
+        try:
+            os_delete_post(post_id, index=_os.getenv("OPENSEARCH_INDEX", "posts"))  # type: ignore
+        except Exception:
+            pass
+    return {"status": "deleted", "post_id": post_id}

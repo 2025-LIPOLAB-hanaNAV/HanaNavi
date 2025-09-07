@@ -128,3 +128,22 @@ def list_attachments(db_path: str, *, post_id: str) -> List[Dict[str, Any]]:
         return [{"filename": r["filename"], "sha1": r["sha1"]} for r in cur.fetchall()]
     finally:
         conn.close()
+
+
+def delete_post(db_path: str, *, post_id: str) -> None:
+    ensure_fts5(db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        # Find rowids mapped to this post_id
+        cur.execute("SELECT rowid FROM fts_row_map WHERE post_id=?", (post_id,))
+        rowids = [r[0] for r in cur.fetchall()]
+        if rowids:
+            cur.executemany("DELETE FROM posts WHERE rowid=?", [(rid,) for rid in rowids])
+            cur.executemany("DELETE FROM fts_row_map WHERE rowid=?", [(rid,) for rid in rowids])
+        # Cleanup meta and attachments
+        cur.execute("DELETE FROM attachments WHERE post_id=?", (post_id,))
+        cur.execute("DELETE FROM post_meta WHERE post_id=?", (post_id,))
+        conn.commit()
+    finally:
+        conn.close()

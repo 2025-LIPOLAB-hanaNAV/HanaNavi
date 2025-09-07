@@ -65,6 +65,12 @@ Embedding: snowflake-arctic-embed-l-v2.0-ko (1024d)
   - [x] Feedback 버튼 (👍/👎)
   - [x] 모델 선택/목록/풀 UI (Ollama)
 
+### 5.1 Board API/DB 연동 (v0.2.0)
+- [x] board-api (FastAPI+SQLAlchemy, Postgres) CRUD
+- [x] 게시글 수정/삭제 UI 연동
+- [x] 첨부 메타 저장 및 재시작 후 유지(ETL appdata 볼륨)
+- [x] 생성/수정/삭제 시 etl-api 웹훅 트리거 → 색인/삭제
+
 ---
 
 ## 6. 모델

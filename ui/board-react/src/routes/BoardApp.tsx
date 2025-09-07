@@ -23,7 +23,7 @@ const BoardApp: React.FC = () => {
               <NavLink to="/new" label="새 글" />
             </nav>
           </div>
-          <a className="text-sm text-gray-600" href="/" onClick={e => e.preventDefault()}>v0.1</a>
+          <a className="text-sm text-gray-600" href="/" onClick={e => e.preventDefault()}>v0.2</a>
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 py-6">
@@ -34,4 +34,3 @@ const BoardApp: React.FC = () => {
 }
 
 export default BoardApp
-

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Attachment, ETL_BASE, PostItem, loadPosts, savePosts } from './types'
+import { Attachment, ETL_BASE, BOARD_BASE } from './types'
 
 type UploadInfo = {
   filename: string
@@ -60,26 +60,19 @@ const BoardNew: React.FC = () => {
         atts = results.map(r => ({ filename: r.filename, url: r.url, public_url: r.public_url, sha1: r.sha1, size: r.size, content_type: r.content_type }))
       }
 
-      const id = String(Date.now())
-      const event = {
-        action: 'post_created',
-        post_id: Number(id),
-        title, body,
+      const payload = {
+        title,
+        body,
         tags: tags ? tags.split(',').map(s => s.trim()).filter(Boolean) : [],
-        category, date: (date || nowLocal()).replace('T', ' '), severity,
+        category,
+        date: (date || nowLocal()).replace('T', ' '),
+        severity,
         attachments: atts,
       }
-
-      // notify ETL (optional worker)
-      await fetch(`${ETL_BASE}/ingest/webhook`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(event) }).catch(() => {})
-
-      // save locally for board UI
-      const post: PostItem = { id, title, body, tags: event.tags, category, date: event.date, severity, attachments: atts, createdAt: new Date().toISOString() }
-      const current = loadPosts()
-      current.unshift(post)
-      savePosts(current)
-
-      nav(`/post/${id}`)
+      const res = await fetch(`${BOARD_BASE}/posts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (!res.ok) throw new Error(`create failed: ${res.status}`)
+      const created = await res.json()
+      nav(`/post/${created.id}`)
     } catch (e: any) {
       setError(e?.message || String(e))
     } finally {

@@ -1,10 +1,24 @@
-import React, { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ETL_BASE, PostItem, loadPosts } from './types'
+import React, { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ETL_BASE, BOARD_BASE, PostItem } from './types'
 
 const BoardView: React.FC = () => {
+  const nav = useNavigate()
   const { id } = useParams()
-  const post = useMemo(() => loadPosts().find(p => p.id === id), [id])
+  const [post, setPost] = useState<PostItem | null>(null)
+  useEffect(() => {
+    const fetchOne = async () => {
+      try {
+        const res = await fetch(`${BOARD_BASE}/posts/${id}`)
+        if (!res.ok) { setPost(null); return }
+        const data = await res.json()
+        setPost(data as PostItem)
+      } catch {
+        setPost(null)
+      }
+    }
+    fetchOne()
+  }, [id])
 
   if (!post) {
     return (
@@ -41,6 +55,14 @@ const BoardView: React.FC = () => {
       <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between">
         <Link to="/" className="text-blue-600 hover:underline">← 목록으로</Link>
         <a className="text-sm text-gray-600" href={`${ETL_BASE}/files/`} onClick={e => e.preventDefault()}>ETL API</a>
+      </div>
+      <div className="px-4 py-3 bg-gray-50 border-t flex items-center gap-2">
+        <button onClick={()=>nav(`/post/${post.id}/edit`)}>수정</button>
+        <button className="bg-red-600 text-white" onClick={async ()=>{
+          if (!confirm('정말 삭제하시겠습니까?')) return
+          await fetch(`${BOARD_BASE}/posts/${post.id}`, { method: 'DELETE' })
+          nav('/')
+        }}>삭제</button>
       </div>
     </div>
   )

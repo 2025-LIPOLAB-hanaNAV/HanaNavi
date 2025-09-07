@@ -2,7 +2,7 @@
 
 프로젝트의 주요 변경사항을 요약합니다. 태그 `v0.1.0` 이후의 주요 변경을 정리했습니다.
 
-## Unreleased
+## v0.2.0
 
 - 추가: OpenSearch IR 백엔드(옵션) 지원 및 Nori 분석기 통합
   - `docker/opensearch/Dockerfile`(analysis-nori) 추가, Compose `--profile opensearch`
@@ -31,5 +31,12 @@
 - 안정화: Qdrant 컬렉션 미존재 시 예외 처리(BM25-only 폴백)
 - 수정: Celery 태스크 임포트, Compose 파서 호환, Vite 플러그인 누락 등 자잘한 빌드/런타임 이슈
 - 문서: README/AGENTS/WBS 갱신(OpenSearch 활성화/모델 관리/퀵스타트/운영 가이드)
+
+- 추가: 게시판 DB/CRUD 완성 (Postgres)
+  - board-api(FastAPI+SQLAlchemy) 신설: `GET/POST/PUT/DELETE /posts`
+  - UI(board-react) 로컬스토리지 제거 → board-api 연동, 수정/삭제 지원
+  - 첨부: etl-api `/upload`로 업로드 → board-api에 메타 저장 → 재시작 후에도 유지
+- 추가: 삭제 파이프라인
+  - worker: `post_deleted` 이벤트 처리 → Qdrant/SQLite/OpenSearch에서 삭제
 
 참고: 자세한 커밋 내역은 `git log v0.1.0..HEAD --oneline`을 확인하세요.
