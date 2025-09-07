@@ -9,8 +9,8 @@ WORKDIR /app
 
 COPY requirements/worker.txt /tmp/requirements.txt
 # Optional wheelhouse for offline/fast installs
-COPY vendor/wheels/common /wheels/common
-COPY vendor/wheels/worker /wheels/svc
+RUN mkdir -p /wheels
+COPY vendor/wheels /wheels
 RUN if [ "$OFFLINE" = "1" ]; then \
       pip install --no-cache-dir --no-index \
         --find-links=/wheels/common --find-links=/wheels/svc \

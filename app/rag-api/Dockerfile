@@ -10,8 +10,8 @@ WORKDIR /app
 
 COPY requirements/rag-api.txt /tmp/requirements.txt
 # Optional wheelhouse (fallback to PyPI if empty and OFFLINE!=1)
-COPY vendor/wheels/common /wheels/common
-COPY vendor/wheels/rag-api /wheels/svc
+RUN mkdir -p /wheels
+COPY vendor/wheels /wheels
 RUN if [ "$OFFLINE" = "1" ]; then \
       pip install --no-cache-dir --no-index \
         --find-links=/wheels/common --find-links=/wheels/svc \

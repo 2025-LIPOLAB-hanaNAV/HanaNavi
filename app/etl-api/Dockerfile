@@ -9,8 +9,8 @@ ARG OFFLINE=0
 WORKDIR /app
 
 COPY requirements/etl-api.txt /tmp/requirements.txt
-COPY vendor/wheels/common /wheels/common
-COPY vendor/wheels/etl-api /wheels/svc
+RUN mkdir -p /wheels
+COPY vendor/wheels /wheels
 RUN if [ "$OFFLINE" = "1" ]; then \
       pip install --no-cache-dir --no-index \
         --find-links=/wheels/common --find-links=/wheels/svc \
