@@ -22,20 +22,37 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
         body = {
             "size": top_k,
             "query": {
-                "multi_match": {
-                    "query": query,
-                    "fields": [
-                        "title^2",
-                        "body",
-                        "tags^1.5",
-                        "category",
-                    ],
-                    "type": "best_fields",
-                    "operator": "and",
+                "bool": {
+                    "should": [
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": [
+                                    "title^2",
+                                    "body",
+                                    "tags^1.5",
+                                    "category",
+                                ],
+                                "type": "most_fields",
+                                "operator": "and",
+                                "fuzziness": "AUTO",
+                            }
+                        },
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": ["title^2", "body"],
+                                "type": "phrase_prefix",
+                            }
+                        },
+                    ]
                 }
             },
             "highlight": {
-                "fields": {"body": {"fragment_size": 150, "number_of_fragments": 1}}
+                "fields": {
+                    "body": {"fragment_size": 150, "number_of_fragments": 1},
+                    "title": {"fragment_size": 80, "number_of_fragments": 1},
+                }
             },
             "_source": [
                 "title",
@@ -75,4 +92,3 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
         return out
     except Exception:
         return []
-

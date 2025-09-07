@@ -46,6 +46,7 @@ services:
       OPENSEARCH_URL: ${OPENSEARCH_URL:-http://opensearch:9200}
       SQLITE_PATH: /data/sqlite/ir.db
       USE_RERANK: "1"
+      USE_ST: "1"
       # set to 'onnx' with RERANKER_ONNX_PATH to enable ONNX
       RERANK_BACKEND: "st"
       FEEDBACK_DIR: /data/feedback
@@ -115,6 +116,7 @@ services:
       - OPENSEARCH_URL=${OPENSEARCH_URL:-http://opensearch:9200}
       - HF_HOME=/data/hf
       - TRANSFORMERS_CACHE=/data/hf
+      - USE_ST=1
     command: ["celery", "-A", "app.worker.celery_app:app", "worker", "--loglevel=info"]
     # Celery worker listening on Redis broker
     volumes:

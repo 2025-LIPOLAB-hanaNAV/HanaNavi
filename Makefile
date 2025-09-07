@@ -67,3 +67,11 @@ wheels-all: wheels-worker wheels-rag wheels-etl wheels-eval
 .PHONY: seed-sample
 seed-sample:
 	bash scripts/seed_sample.sh
+
+.PHONY: seed-sample-pdf
+seed-sample-pdf:
+	bash scripts/seed_sample_pdf.sh $(ARGS)
+
+.PHONY: reindex-opensearch
+reindex-opensearch:
+	$(COMPOSE) exec worker python -m app.tools.reindex_opensearch || true

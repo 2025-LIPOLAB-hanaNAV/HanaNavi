@@ -23,7 +23,7 @@
 ## 주요 스택
 - Backend: Python (FastAPI, Celery or Prefect)
 - Vector DB: **Qdrant** (1024d, cosine)
-- IR DB: SQLite FTS5 (MVP), 필요 시 Meilisearch 승격
+- IR DB: SQLite FTS5 (MVP) 또는 **OpenSearch**(선택) → RRF 융합
 - Cache/DB: Redis, Postgres (Dify 필수)
 - Storage: 로컬 볼륨(첨부), 필요 시 MinIO 승격
 - LLM: **Gemma3 12B** (상향 시 27B), Ollama/llama.cpp 내부 서빙
@@ -40,7 +40,7 @@
 2. Worker: 첨부 다운로드 → 파싱(pdf/xlsx/docx) → 청킹
 3. 임베딩(snowflake v2 ko) → Qdrant 업서트
 4. IR 색인(SQLite FTS5, 제목/본문/태그/카테고리/파일타입/posted_at/severity)
-5. 검색 시: BM25 top-50 + Vec top-50 → RRF(kRR=60) → top-20 rerank + 최신성 부스트 + 선택적 필터
+5. 검색 시: BM25 top-50(SQLite/OpenSearch) + Vec top-50(Qdrant) → RRF(kRR=60) → top-20 rerank + 최신성 부스트 + 선택적 필터
 6. rag-api: LLM 합성 답변 + 출처(문서명 + 범위) + 정책 거절/마스킹 + 스트리밍(SSE)
 
 ---
