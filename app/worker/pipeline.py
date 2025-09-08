@@ -99,6 +99,7 @@ def run_ingest(event: Dict[str, Any]) -> Dict[str, Any]:
         parsed_texts.extend(_parse_attachment(p))
 
     # 3) Qdrant: 첨부파일만 벡터 인덱싱 (게시글 본문 제외)
+    chunks: List[str] = []  # Initialize chunks outside the if block
     if parsed_texts:  # 첨부파일이 있는 경우만
         chunks = chunk_texts(parsed_texts, chunk_size=400, overlap=50)
         vectors = embed_passages(chunks, dim=1024)

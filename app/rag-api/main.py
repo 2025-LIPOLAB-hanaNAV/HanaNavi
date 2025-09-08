@@ -189,13 +189,18 @@ def _dedupe_citations(hits, max_citations=5, query=""):
         if key not in seen:
             seen.add(key)
             snippet = h.get("snippet", "")
+            title = h.get("title", "")
             unique_cits.append({
-                "id": h["id"],
-                "title": h.get("title"),
+                "id": h.get("id"),
+                "title": title,
                 "source": source,
                 "post_id": post_id,
                 "snippet": snippet,
-                "highlighted_snippet": _highlight_snippet(snippet, query)  # 하이라이트된 스니펫
+                "highlighted_snippet": _highlight_snippet(snippet, query),  # 하이라이트된 스니펫
+                "category": h.get("category"),
+                "filetype": h.get("filetype"),
+                "posted_at": h.get("posted_at"),
+                "score": h.get("score")
             })
             if len(unique_cits) >= max_citations:
                 break
@@ -270,11 +275,8 @@ def rag_query(req: RagRequest) -> RagResponse:
     convo.append({"role": "user", "content": final_user})
     with _llm_sem_thread:
         answer = client.chat(convo)
-    if not answer or answer.startswith("Not implemented"):
-        # Fallback answer for stub
-        answer = "(stub) 컨텍스트 기반 초안 답변. Citations: " + ", ".join(
-            [f"[{i+1}]" for i in range(min(len(cits), req.top_k))]
-        )
+    if not answer:
+        raise HTTPException(status_code=503, detail="LLM 서비스가 답변 생성에 실패했습니다. (LLM service failed to generate an answer.)")
     
     # 답변 품질 향상 적용 (정책 검사 전)
     if not smalltalk and answer and not answer.startswith("(stub)"):

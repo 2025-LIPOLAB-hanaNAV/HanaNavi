@@ -16,7 +16,23 @@ def _normalize_query(q: str) -> str:
     while prev != q:
         prev = q
         q = re.sub(r"([가-힣])\s+([가-힣])", r"\1\2", q)
-    return q
+    
+    # FTS5 safe processing: escape special characters and handle Korean
+    # Remove or escape FTS5 operators that might cause syntax errors
+    q = re.sub(r'[{}()^"*?]', '', q)  # Remove FTS5 operators
+    q = q.strip()
+    
+    # If query is empty after cleaning, return a safe fallback
+    if not q:
+        return "*"
+        
+    # Split into terms and join with space for FTS5 AND behavior
+    terms = [t for t in q.split() if len(t) > 1]  # Filter very short terms
+    if not terms:
+        return "*"
+        
+    # Join terms for FTS5 search
+    return " ".join(terms)
 
 
 def _fallback_like(conn: sqlite3.Connection, query: str, limit: int) -> List[Tuple[str, float, Dict[str, Any]]]:
@@ -69,23 +85,28 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
         cur = conn.cursor()
         q = _normalize_query(query)
         # Use bm25(fts) scoring; snippet limited
-        cur.execute(
-            """
-            SELECT p.rowid AS id, m.post_id AS post_id, p.title, p.body, p.tags, p.category, p.filetype, p.posted_at,
-                   bm25(posts) AS score
-            FROM posts p
-            LEFT JOIN fts_row_map m ON m.rowid = p.rowid
-            WHERE p MATCH ?
-            ORDER BY score
-            LIMIT ?
-            """,
-            (q, top_k),
-        )
+        try:
+            cur.execute(
+                """
+                SELECT p.rowid AS id, m.post_id AS post_id, p.title, p.body, p.tags, p.category, p.filetype, p.posted_at,
+                       bm25(posts) AS score
+                FROM posts p
+                LEFT JOIN fts_row_map m ON m.rowid = p.rowid
+                WHERE posts MATCH ?
+                ORDER BY score
+                LIMIT ?
+                """,
+                (q, top_k),
+            )
+            rows = cur.fetchall()
+        except sqlite3.OperationalError:
+            # FTS5 syntax error - fallback to LIKE search
+            return _fallback_like(conn, query, top_k)
+            
         out: List[Tuple[str, float, Dict[str, Any]]] = []
-        rows = cur.fetchall()
         if not rows:
             # Fallback LIKE scan when MATCH yields 0 rows (esp. for Korean with spaced syllables)
-            return _fallback_like(conn, q, top_k)
+            return _fallback_like(conn, query, top_k)
         for row in rows:
             doc_id = f"post:{row['id']}"
             body = row["body"] or ""
