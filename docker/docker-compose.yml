@@ -42,7 +42,7 @@ services:
       QDRANT_URL: http://qdrant:6333
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       LLM_MODEL: ${LLM_MODEL:-gemma3:12b}
-      IR_BACKEND: ${IR_BACKEND:-sqlite}
+      IR_BACKEND: sqlite
       OPENSEARCH_URL: ${OPENSEARCH_URL:-https://opensearch:9200}
       OPENSEARCH_USER: ${OPENSEARCH_USER:-admin}
       OPENSEARCH_PASSWORD: ${OPENSEARCH_PASSWORD:-admin123!}
@@ -128,7 +128,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - STORAGE_DIR=/data/storage
       - SQLITE_PATH=/data/sqlite/ir.db
-      - IR_BACKEND=${IR_BACKEND:-sqlite}
+      - IR_BACKEND=sqlite
       - OPENSEARCH_URL=${OPENSEARCH_URL:-https://opensearch:9200}
       - OPENSEARCH_USER=${OPENSEARCH_USER:-admin}
       - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD:-admin123!}

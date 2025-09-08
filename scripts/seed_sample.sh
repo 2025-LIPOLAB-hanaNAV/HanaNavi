@@ -25,7 +25,7 @@ PAYLOAD="${PAYLOAD/__DATE__/$DATE_UTC}"
 echo "Seeding sample post to ${ETL_BASE}/ingest/webhook (post_id=${ID})"
 echo "Payload:" >&2
 echo "$PAYLOAD" >&2
-curl -sS -X POST "${ETL_BASE}/ingest/webhook" -H 'Content-Type: application/json' -d "$PAYLOAD" | jq . || true
+curl -v -X POST "${ETL_BASE}/ingest/webhook" -H 'Content-Type: application/json' -d "$PAYLOAD" | jq .
 
 echo "Done. You can now query rag-api and expect citations once indexing finishes."
 

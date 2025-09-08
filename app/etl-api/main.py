@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 import os
 import hashlib
+import time
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,6 +85,23 @@ async def webhook(event: WebhookEvent) -> Dict[str, Any]:
     if ingest_from_webhook:
         async_result = ingest_from_webhook.delay(payload)  # type: ignore
         task_id = async_result.id
+    else:
+        # Fallback: simplified processing when worker is unavailable
+        try:
+            # Basic processing without heavy dependencies
+            post_id = payload.get("post_id")
+            title = payload.get("title", "")
+            body = payload.get("body", "")
+            
+            print(f"Processing post {post_id}: {title}")
+            
+            # TODO: Add actual indexing logic here when dependencies are available
+            # For now, just log the event
+            task_id = f"sync_{post_id}_{int(time.time())}"
+            
+        except Exception as e:
+            print(f"Simplified processing failed: {e}")
+            task_id = "error"
     return {"status": "accepted", "task_id": task_id, "event": payload}
 
 
@@ -120,14 +138,14 @@ async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
 
     public_base = os.getenv("PUBLIC_BASE_URL", "http://localhost:8002")
     internal_base = os.getenv("INTERNAL_BASE_URL", "http://etl-api:8000")
-    rel = f"/files/{safe_name}"
+    download_rel = f"/download/{safe_name}"
     return {
         "filename": safe_name,
         "sha1": sha1,
         "size": os.path.getsize(dest_path),
         "content_type": file.content_type,
-        "url": internal_base + rel,
-        "public_url": public_base + rel,
+        "url": internal_base + download_rel,
+        "public_url": public_base + download_rel,
     }
 
 
@@ -136,6 +154,38 @@ async def list_post_attachments(post_id: str) -> Dict[str, Any]:
     public_base = os.getenv("PUBLIC_BASE_URL", "http://localhost:8002")
     items = get_attachments(post_id, public_base)
     return {"post_id": post_id, "attachments": items}
+
+
+@app.get("/download/{filename:path}")
+async def download_file(filename: str):
+    """Download a file from the uploads directory."""
+    from fastapi.responses import FileResponse
+    import urllib.parse
+    
+    # URL decode the filename
+    decoded_filename = urllib.parse.unquote(filename)
+    print(f"DEBUG: Raw filename: {repr(filename)}")
+    print(f"DEBUG: Decoded filename: {repr(decoded_filename)}")
+    
+    # Ensure filename is safe (no directory traversal)
+    safe_filename = os.path.basename(decoded_filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
+    
+    print(f"DEBUG: Safe filename: {repr(safe_filename)}")
+    print(f"DEBUG: File path: {repr(file_path)}")
+    print(f"DEBUG: File exists: {os.path.exists(file_path)}")
+    
+    # List files in directory for debugging
+    if not os.path.exists(file_path):
+        files = os.listdir(UPLOAD_DIR)
+        print(f"DEBUG: Available files: {files}")
+        raise HTTPException(status_code=404, detail=f"File not found: {safe_filename}")
+    
+    return FileResponse(
+        path=file_path,
+        filename=safe_filename,
+        media_type='application/octet-stream'
+    )
 
 
 @app.get("/preview/xlsx")

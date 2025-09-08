@@ -44,8 +44,12 @@ def _pass_filters(payload: Dict[str, Any], filters: Dict[str, Any]) -> bool:
 def hybrid_search(query: str, top_k: int = 20, filters: Optional[Dict[str, Any]] = None, model: Optional[str] = None) -> List[Dict[str, Any]]:
     # 분리된 검색 전략: OpenSearch(게시글) + Qdrant(첨부파일)
     import os as _os
-    # OpenSearch인 경우만 model 파라미터 전달
-    if _os.getenv("IR_BACKEND", "sqlite").lower() == "opensearch":
+    ir_backend = _os.getenv("IR_BACKEND", "sqlite").lower()
+    
+    # IR 백엔드가 disabled인 경우 BM25 검색 건너뛰기
+    if ir_backend == "disabled":
+        bm25 = []  # 빈 결과로 벡터 검색만 사용
+    elif ir_backend == "opensearch":
         bm25 = bm25_search(query, top_k=30, model=model)  # OpenSearch - LLM 향상 적용
     else:
         bm25 = bm25_search(query, top_k=30)  # SQLite - 기본 검색

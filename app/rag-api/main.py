@@ -237,6 +237,57 @@ def _get_query_type_hints(query: str) -> str:
         return "질의에 대해 핵심 내용을 우선 제시하고, 필요시 세부사항을 보완하세요."
 
 
+class DebugSearchRequest(BaseModel):
+    query: str
+    top_k: int = 8
+    filters: Dict[str, Any] | None = None
+    model: str | None = None
+
+class DebugSearchResponse(BaseModel):
+    query: str
+    hits: List[Dict[str, Any]]
+    citations: List[Dict[str, Any]]
+    context: str
+    final_query: str
+
+@app.post("/debug/search", response_model=DebugSearchResponse)
+def debug_search(req: DebugSearchRequest) -> DebugSearchResponse:
+    """RAG 검색 과정을 단계별로 디버깅할 수 있는 엔드포인트"""
+    query = req.query
+    smalltalk = _is_smalltalk(query)
+    
+    # 1. 하이브리드 검색 수행
+    hits = [] if smalltalk else do_hybrid(query, top_k=max(10, req.top_k), filters=req.filters or {}, model=req.model)
+    
+    # 2. Citations 생성  
+    cits = [] if smalltalk else _dedupe_citations(hits, query=query)
+    
+    # 3. Context 생성
+    ctx = "\n\n".join([f"[{i+1}] {c['snippet']}" for i, c in enumerate(cits)])
+    
+    # 4. 최종 쿼리 생성
+    query_type_hints = _get_query_type_hints(query)
+    final_user = (
+        "아래 제공된 컨텍스트 정보를 바탕으로 질의에 정확하고 유용하게 한국어로 답변하세요.\n"
+        f"{query_type_hints}\n"
+        "답변 작성 규칙:\n"
+        "1. 띄어쓰기와 맞춤법을 정확하게 작성하세요\n"
+        "2. 각 주요 내용 뒤에 반드시 [1], [2] 형태의 인용 번호를 붙이세요\n"
+        "3. 컨텍스트에 없는 내용은 절대 추가하지 마세요\n"
+        "4. 정중하고 전문적이면서도 이해하기 쉬운 톤을 유지하세요\n"
+        "5. 핵심 내용을 먼저 제시한 후 세부사항을 설명하세요\n"
+        "6. 마지막 줄에 'Citations: [1],[2],...' 형태로 사용된 인용 목록을 정리하세요\n\n"
+        f"질의: {query}\n\n컨텍스트:\n{ctx}"
+    )
+    
+    return DebugSearchResponse(
+        query=query,
+        hits=hits[:5],  # 상위 5개만 반환
+        citations=cits,
+        context=ctx,
+        final_query=final_user
+    )
+
 @app.post("/rag/query", response_model=RagResponse)
 def rag_query(req: RagRequest) -> RagResponse:
     mode = req.mode
@@ -261,15 +312,16 @@ def rag_query(req: RagRequest) -> RagResponse:
         query_type_hints = _get_query_type_hints(req.query)
         
         final_user = (
-            "아래 제공된 컨텍스트 정보를 바탕으로 질의에 정확하고 유용하게 한국어로 답변하세요.\n"
+            "아래 제공된 컨텍스트 정보만을 사용하여 질의에 정확하게 한국어로 답변하세요.\n"
             f"{query_type_hints}\n"
-            "답변 작성 규칙:\n"
-            "1. 띄어쓰기와 맞춤법을 정확하게 작성하세요\n"
-            "2. 각 주요 내용 뒤에 반드시 [1], [2] 형태의 인용 번호를 붙이세요\n"
-            "3. 컨텍스트에 없는 내용은 절대 추가하지 마세요\n"
-            "4. 정중하고 전문적이면서도 이해하기 쉬운 톤을 유지하세요\n"
-            "5. 핵심 내용을 먼저 제시한 후 세부사항을 설명하세요\n"
-            "6. 마지막 줄에 'Citations: [1],[2],...' 형태로 사용된 인용 목록을 정리하세요\n\n"
+            "중요한 답변 작성 규칙:\n"
+            "1. 반드시 컨텍스트에 있는 내용만 사용하세요. 컨텍스트에 없는 정보는 절대 추가하지 마세요\n"
+            "2. 컨텍스트가 질의와 관련이 없다면 '제공된 자료에서는 해당 내용을 찾을 수 없습니다'라고 답변하세요\n"
+            "3. 각 주요 내용 뒤에 반드시 [1], [2] 형태의 인용 번호를 붙이세요\n"
+            "4. 컨텍스트의 내용을 그대로 인용하되, 자연스럽게 재구성하세요\n"
+            "5. 추측이나 일반적인 지식을 추가하지 마세요\n"
+            "6. 띄어쓰기와 맞춤법을 정확하게 작성하세요\n"
+            "7. 마지막 줄에 'Citations: [1],[2],...' 형태로 사용된 인용 목록을 정리하세요\n\n"
             f"질의: {req.query}\n\n컨텍스트:\n{ctx}"
         )
     convo.append({"role": "user", "content": final_user})
@@ -325,15 +377,16 @@ async def rag_stream(req: RagRequest):
         query_type_hints = _get_query_type_hints(req.query)
         
         final_user = (
-            "아래 제공된 컨텍스트 정보를 바탕으로 질의에 정확하고 유용하게 한국어로 답변하세요.\n"
+            "아래 제공된 컨텍스트 정보만을 사용하여 질의에 정확하게 한국어로 답변하세요.\n"
             f"{query_type_hints}\n"
-            "답변 작성 규칙:\n"
-            "1. 띄어쓰기와 맞춤법을 정확하게 작성하세요\n"
-            "2. 각 주요 내용 뒤에 반드시 [1], [2] 형태의 인용 번호를 붙이세요\n"
-            "3. 컨텍스트에 없는 내용은 절대 추가하지 마세요\n"
-            "4. 정중하고 전문적이면서도 이해하기 쉬운 톤을 유지하세요\n"
-            "5. 핵심 내용을 먼저 제시한 후 세부사항을 설명하세요\n"
-            "6. 마지막 줄에 'Citations: [1],[2],...' 형태로 사용된 인용 목록을 정리하세요\n\n"
+            "중요한 답변 작성 규칙:\n"
+            "1. 반드시 컨텍스트에 있는 내용만 사용하세요. 컨텍스트에 없는 정보는 절대 추가하지 마세요\n"
+            "2. 컨텍스트가 질의와 관련이 없다면 '제공된 자료에서는 해당 내용을 찾을 수 없습니다'라고 답변하세요\n"
+            "3. 각 주요 내용 뒤에 반드시 [1], [2] 형태의 인용 번호를 붙이세요\n"
+            "4. 컨텍스트의 내용을 그대로 인용하되, 자연스럽게 재구성하세요\n"
+            "5. 추측이나 일반적인 지식을 추가하지 마세요\n"
+            "6. 띄어쓰기와 맞춤법을 정확하게 작성하세요\n"
+            "7. 마지막 줄에 'Citations: [1],[2],...' 형태로 사용된 인용 목록을 정리하세요\n\n"
             f"질의: {req.query}\n\n컨텍스트:\n{ctx}"
         )
     convo.append({"role": "user", "content": final_user})

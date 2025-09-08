@@ -92,7 +92,7 @@ def bm25_search(query: str, top_k: int = 50) -> List[Tuple[str, float, Dict[str,
                        bm25(posts) AS score
                 FROM posts p
                 LEFT JOIN fts_row_map m ON m.rowid = p.rowid
-                WHERE posts MATCH ?
+                WHERE p.rowid IN (SELECT rowid FROM posts WHERE posts MATCH ?)
                 ORDER BY score
                 LIMIT ?
                 """,

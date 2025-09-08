@@ -2,6 +2,13 @@ fastapi
 uvicorn[standard]
 celery>=5
 redis
+requests
+qdrant-client
+pypdf
 openpyxl
+python-docx
+sentence-transformers
+numpy
+opensearch-py
 prometheus-client
 python-multipart

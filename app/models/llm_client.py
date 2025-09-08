@@ -68,7 +68,9 @@ class LLMClient:
             if isinstance(data, dict) and "message" in data:
                 return data["message"].get("content", "")
             return ""
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"LLM call failed: {e}", file=sys.stderr)
             return ""
 
     def chat_stream(self, messages: List[Dict[str, str]]) -> Iterable[str]:

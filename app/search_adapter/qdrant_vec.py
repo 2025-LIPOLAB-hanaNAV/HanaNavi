@@ -26,7 +26,7 @@ def vector_search(
     try:
         vec = embed_query([query])[0]
         cli = _client()
-        res = cli.search(collection_name=collection, query_vector=vec, limit=top_k)
+        res = cli.search(collection_name=collection, query_vector=vec, limit=top_k, with_payload=True)
         out: List[Tuple[str, float, Dict[str, Any]]] = []
         for p in res:
             pid = str(p.id)

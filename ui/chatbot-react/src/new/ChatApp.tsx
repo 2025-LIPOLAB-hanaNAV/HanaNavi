@@ -8,9 +8,37 @@ type Policy = { refusal: boolean; masked: boolean; pii_types: string[]; reason: 
 type Message = { role: 'user' | 'assistant'; content: string; citations?: Citation[]; policy?: Policy }
 
 const ChatApp: React.FC = () => {
-  const RAG_BASE = useMemo(() => import.meta.env.VITE_RAG_BASE || 'http://localhost:8001', [])
-  const ETL_BASE = useMemo(() => import.meta.env.VITE_ETL_BASE || 'http://localhost:8002', [])
-  const BOARD_BASE = useMemo(() => import.meta.env.VITE_BOARD_BASE || 'http://localhost:5173', [])
+  const RAG_BASE = useMemo(() => {
+    // If VITE_RAG_BASE is provided, use it; otherwise detect dynamically
+    if (import.meta.env.VITE_RAG_BASE) {
+      return import.meta.env.VITE_RAG_BASE
+    }
+    // For external access, use current hostname with RAG API port
+    const currentHost = window.location.hostname
+    return currentHost === 'localhost' || currentHost === '127.0.0.1' 
+      ? 'http://localhost:8001' 
+      : `${window.location.protocol}//${currentHost}:8001`
+  }, [])
+  
+  const ETL_BASE = useMemo(() => {
+    if (import.meta.env.VITE_ETL_BASE) {
+      return import.meta.env.VITE_ETL_BASE
+    }
+    const currentHost = window.location.hostname
+    return currentHost === 'localhost' || currentHost === '127.0.0.1'
+      ? 'http://localhost:8002'
+      : `${window.location.protocol}//${currentHost}:8002`
+  }, [])
+  
+  const BOARD_BASE = useMemo(() => {
+    if (import.meta.env.VITE_BOARD_BASE) {
+      return import.meta.env.VITE_BOARD_BASE
+    }
+    const currentHost = window.location.hostname
+    return currentHost === 'localhost' || currentHost === '127.0.0.1'
+      ? 'http://localhost:5173'
+      : `${window.location.protocol}//${currentHost}:5173`
+  }, [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -71,46 +99,43 @@ const ChatApp: React.FC = () => {
 
       const reader = res.body.getReader()
       const dec = new TextDecoder()
-      let buffer = ''
-      let pendingEvent: string | null = null
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
-        buffer += dec.decode(value, { stream: true })
-        const chunks = buffer.split('\n\n')
-        buffer = chunks.pop() || ''
-        for (const ev of chunks) {
-          const lines = ev.split('\n').map(l => l.trim()).filter(Boolean)
+        // SSE messages are separated by double newlines
+        const chunks = dec.decode(value).split('\n\n')
+        for (const chunk of chunks) {
+          if (!chunk.trim()) continue
           let eventName: string | null = null
-          let dataPayload: string | null = null
-          for (const l of lines) {
-            if (l.startsWith('event:')) eventName = l.slice(6).trim()
-            if (l.startsWith('data:')) dataPayload = (dataPayload || '') + l.slice(5)
+          let dataPayload = ''
+          const lines = chunk.split('\n')
+          for(const line of lines) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+              dataPayload += line.slice(5)
+            }
           }
-          if (eventName) pendingEvent = eventName
-          if (!dataPayload) continue
-          // Citations event delivers JSON array; default data lines are text deltas
-          if ((pendingEvent === 'citations') || (dataPayload.startsWith('[') || dataPayload.startsWith('{'))) {
+
+          if (eventName === 'citations') {
             try {
               const obj = JSON.parse(dataPayload)
               if (Array.isArray(obj)) {
                 setMessages(m => {
-                  const copy = [...m]
+                  const copy = [...m] 
                   const last = copy[copy.length - 1]
                   if (last && last.role === 'assistant') (last as any).citations = obj
                   return copy
                 })
               }
             } catch {
-              // ignore parse errors
+              // ignore json parse errors
             }
-            pendingEvent = null
-          } else {
-            const data = dataPayload
+          } else if (dataPayload) {
             setMessages(m => {
-              const copy = [...m]
+              const copy = [...m] 
               const last = copy[copy.length - 1]
-              if (last && last.role === 'assistant') last.content += data
+              if (last && last.role === 'assistant') last.content += dataPayload
               return copy
             })
           }
